@@ -1,6 +1,8 @@
 from fastapi import APIRouter, Depends
 from sqlalchemy import func, select
 from sqlalchemy.orm import Session
+from typing import List
+
 from pydantic import BaseModel
 
 from app.database import get_db
@@ -48,7 +50,7 @@ def get_total_stats(db: Session = Depends(get_db)):
     )
 
 
-@router.get("/by-operation-type", response_model=list[GroupCount])
+@router.get("/by-operation-type", response_model=List[GroupCount])
 def stats_by_operation_type(db: Session = Depends(get_db)):
     rows = db.execute(
         select(WorkOrder.operation_type, func.count().label("cnt"))
@@ -58,7 +60,7 @@ def stats_by_operation_type(db: Session = Depends(get_db)):
     return [GroupCount(name=r[0], count=r[1]) for r in rows]
 
 
-@router.get("/by-product-category", response_model=list[GroupCount])
+@router.get("/by-product-category", response_model=List[GroupCount])
 def stats_by_product_category(db: Session = Depends(get_db)):
     """按产品分类分组统计：互联网专线 / 千里眼（包含视频算力一张网和接入和云存储功能费用）"""
     internet_count = db.execute(
@@ -77,7 +79,7 @@ def stats_by_product_category(db: Session = Depends(get_db)):
     ]
 
 
-@router.get("/by-status", response_model=list[GroupCount])
+@router.get("/by-status", response_model=List[GroupCount])
 def stats_by_status(db: Session = Depends(get_db)):
     rows = db.execute(
         select(WorkOrder.status, func.count().label("cnt"))
@@ -87,7 +89,7 @@ def stats_by_status(db: Session = Depends(get_db)):
     return [GroupCount(name=r[0], count=r[1]) for r in rows]
 
 
-@router.get("/by-city", response_model=list[GroupCount])
+@router.get("/by-city", response_model=List[GroupCount])
 def stats_by_city(db: Session = Depends(get_db)):
     rows = db.execute(
         select(WorkOrder.business_location_city, func.count().label("cnt"))
@@ -98,7 +100,7 @@ def stats_by_city(db: Session = Depends(get_db)):
     return [GroupCount(name=r[0], count=r[1]) for r in rows]
 
 
-@router.get("/active-by-city", response_model=list[GroupCount])
+@router.get("/active-by-city", response_model=List[GroupCount])
 def stats_active_by_city(db: Session = Depends(get_db)):
     """在途工单（开通中）按业务所属地市降序排列"""
     rows = db.execute(
@@ -116,7 +118,7 @@ def stats_active_by_city(db: Session = Depends(get_db)):
     return result
 
 
-@router.get("/cross-operation-category", response_model=list[CrossStatItem])
+@router.get("/cross-operation-category", response_model=List[CrossStatItem])
 def stats_cross_operation_category(db: Session = Depends(get_db)):
     """操作类型 x 产品分类分组（互联网专线/千里眼）交叉统计"""
     rows = db.execute(

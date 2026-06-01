@@ -1,4 +1,4 @@
-from typing import Optional
+from typing import List, Optional
 
 from fastapi import APIRouter, Depends, HTTPException, Query, UploadFile, File
 from sqlalchemy.orm import Session
@@ -52,7 +52,7 @@ def list_work_orders(
     )
 
 
-@router.get("/cities", response_model=list[str])
+@router.get("/cities", response_model=List[str])
 def get_business_location_cities(
     db: Session = Depends(get_db),
 ):

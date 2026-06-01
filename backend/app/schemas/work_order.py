@@ -1,5 +1,5 @@
 from datetime import datetime
-from typing import Optional
+from typing import List, Optional
 
 from pydantic import BaseModel, Field
 
@@ -65,6 +65,6 @@ class WorkOrderResponse(WorkOrderBase):
 
 class WorkOrderList(BaseModel):
     total: int
-    items: list[WorkOrderResponse]
+    items: List[WorkOrderResponse]
     skip: int
     limit: int

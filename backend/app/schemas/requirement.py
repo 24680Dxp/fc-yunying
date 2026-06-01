@@ -1,5 +1,5 @@
 from datetime import datetime
-from typing import Optional
+from typing import List, Optional
 
 from pydantic import BaseModel, Field
 
@@ -49,6 +49,6 @@ class RequirementResponse(RequirementBase):
 
 class RequirementList(BaseModel):
     total: int
-    items: list[RequirementResponse]
+    items: List[RequirementResponse]
     skip: int
     limit: int
