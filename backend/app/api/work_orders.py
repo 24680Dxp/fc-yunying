@@ -131,7 +131,7 @@ def upload_work_orders(
     try:
         # 先保存到临时文件再解析
         import tempfile
-        content = file.read()
+        content = file.file.read()
         if not content:
             raise HTTPException(status_code=400, detail="上传文件为空")
         with tempfile.NamedTemporaryFile(suffix='.xlsx', delete=False) as tmp:
