@@ -55,7 +55,7 @@ def login(data: LoginRequest, db: Session = Depends(get_db)):
 
 @router.get("/me", response_model=UserInfo)
 def get_me(current_user: User = Depends(get_current_user)):
-    return UserInfo.model_validate(current_user)
+    return UserInfo.from_orm(current_user)
 
 
 class CreateUserRequest(BaseModel):
@@ -84,4 +84,4 @@ def create_user(
     db.add(user)
     db.commit()
     db.refresh(user)
-    return UserInfo.model_validate(user)
+    return UserInfo.from_orm(user)

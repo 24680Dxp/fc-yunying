@@ -46,7 +46,7 @@ def list_work_orders(
     )
     return WorkOrderList(
         total=total,
-        items=[WorkOrderResponse.model_validate(r) for r in items],
+        items=[WorkOrderResponse.from_orm(r) for r in items],
         skip=skip,
         limit=limit,
     )
@@ -64,7 +64,7 @@ def get_work_order(work_order_id: int, db: Session = Depends(get_db)):
     wo = WorkOrderService.get_work_order(db, work_order_id)
     if not wo:
         raise HTTPException(status_code=404, detail="工单不存在")
-    return WorkOrderResponse.model_validate(wo)
+    return WorkOrderResponse.from_orm(wo)
 
 
 @router.post("/", response_model=WorkOrderResponse, status_code=201)
@@ -74,7 +74,7 @@ def create_work_order(
     _: User = Depends(require_admin),
 ):
     wo = WorkOrderService.create_work_order(db, data)
-    return WorkOrderResponse.model_validate(wo)
+    return WorkOrderResponse.from_orm(wo)
 
 
 @router.put("/{work_order_id}", response_model=WorkOrderResponse)
@@ -87,7 +87,7 @@ def update_work_order(
     wo = WorkOrderService.update_work_order(db, work_order_id, data)
     if not wo:
         raise HTTPException(status_code=404, detail="工单不存在")
-    return WorkOrderResponse.model_validate(wo)
+    return WorkOrderResponse.from_orm(wo)
 
 
 import openpyxl
