@@ -131,8 +131,9 @@ def upload_work_orders(
     try:
         # 先保存到临时文件再解析（解决 tengine 代理的文件流问题）
         import tempfile
+        content = file.read()
         with tempfile.NamedTemporaryFile(suffix='.xlsx', delete=False) as tmp:
-            tmp.write(file.file.read())
+            tmp.write(content)
             tmp_path = tmp.name
         wb = openpyxl.load_workbook(tmp_path, data_only=True)
         os.unlink(tmp_path)
