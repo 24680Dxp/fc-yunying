@@ -1,4 +1,4 @@
-from typing import Optional
+from typing import Optional, Tuple, List
 
 from sqlalchemy import func, select
 from sqlalchemy.orm import Session
@@ -24,7 +24,7 @@ class WorkOrderService:
         operation_type: Optional[str] = None,
         business_location_city: Optional[str] = None,
         product_category_group: Optional[str] = None,
-    ) -> tuple[list[WorkOrder], int]:
+    ) -> Tuple[List[WorkOrder], int]:
         # Build filter conditions
         filters = []
         if status:

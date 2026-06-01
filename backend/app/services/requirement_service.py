@@ -1,4 +1,4 @@
-from typing import Optional
+from typing import Optional, Tuple, List
 
 from sqlalchemy import func, select
 from sqlalchemy.orm import Session
@@ -22,7 +22,7 @@ class RequirementService:
         city: Optional[str] = None,
         district: Optional[str] = None,
         order_type: Optional[str] = None,
-    ) -> tuple[list[Requirement], int]:
+    ) -> Tuple[List[Requirement], int]:
         # Build filter conditions for count
         filters = []
         if priority:
