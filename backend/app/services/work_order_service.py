@@ -95,7 +95,7 @@ class WorkOrderService:
         return wo
 
     @staticmethod
-    def replace_all(db: Session, items: list[dict]) -> int:
+    def replace_all(db: Session, items: List[dict]) -> int:
         """清空所有工单并批量插入新数据。返回导入条数。"""
         # 清空
         db.query(WorkOrder).delete()
@@ -117,7 +117,7 @@ class WorkOrderService:
         return True
 
     @staticmethod
-    def get_business_location_cities(db: Session) -> list[str]:
+    def get_business_location_cities(db: Session) -> List[str]:
         query = select(WorkOrder.business_location_city).distinct().where(
             WorkOrder.business_location_city.isnot(None),
             WorkOrder.business_location_city != '',
