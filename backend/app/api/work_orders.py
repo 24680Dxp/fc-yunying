@@ -129,7 +129,13 @@ def upload_work_orders(
         raise HTTPException(status_code=400, detail="仅支持 .xlsx 文件")
 
     try:
-        wb = openpyxl.load_workbook(file.file, data_only=True)
+        # 先保存到临时文件再解析（解决 tengine 代理的文件流问题）
+        import tempfile
+        with tempfile.NamedTemporaryFile(suffix='.xlsx', delete=False) as tmp:
+            tmp.write(file.file.read())
+            tmp_path = tmp.name
+        wb = openpyxl.load_workbook(tmp_path, data_only=True)
+        os.unlink(tmp_path)
     except Exception:
         raise HTTPException(status_code=400, detail="无法解析Excel文件")
 
