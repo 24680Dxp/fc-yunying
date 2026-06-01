@@ -130,7 +130,7 @@ def upload_work_orders(
 
     try:
         # 先保存到临时文件再解析
-        import tempfile
+        import tempfile, os
         content = file.file.read()
         if not content:
             raise HTTPException(status_code=400, detail="上传文件为空")
