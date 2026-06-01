@@ -1,5 +1,6 @@
 from sqlalchemy import create_engine
-from sqlalchemy.orm import DeclarativeBase, Session, sessionmaker
+from sqlalchemy.ext.declarative import declarative_base
+from sqlalchemy.orm import Session, sessionmaker
 
 SQLALCHEMY_DATABASE_URL = "sqlite:///./operation.db"
 
@@ -11,9 +12,7 @@ engine = create_engine(
 
 SessionLocal = sessionmaker(autocommit=False, autoflush=False, bind=engine)
 
-
-class Base(DeclarativeBase):
-    pass
+Base = declarative_base()
 
 
 def get_db() -> Session:
