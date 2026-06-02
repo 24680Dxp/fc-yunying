@@ -27,21 +27,21 @@ const guangdongCities = [
 const columns = [
   { title: 'CRM订单号', dataIndex: 'crm_order_id', width: 140, ellipsis: true },
   { title: '工单号', dataIndex: 'order_no', width: 160, ellipsis: true },
-  { title: '工单主题', dataIndex: 'title', ellipsis: true, width: 200 },
+  { title: '工单主题', dataIndex: 'title', ellipsis: true, minWidth: 160 },
   { title: '派单时间', dataIndex: 'dispatch_time', width: 140 },
   { title: '业务受理地市', dataIndex: 'business_city', width: 110 },
-  { title: '产品分类', dataIndex: 'product_category', width: 100 },
+  { title: '产品分类', dataIndex: 'product_category', width: 130 },
   { title: '操作类型', dataIndex: 'operation_type', width: 100 },
   { title: '集团产品号码', dataIndex: 'group_product_number', width: 130, ellipsis: true },
   { title: '业务所属地市', dataIndex: 'business_location_city', width: 110 },
-  { title: '客户机房详细地址', dataIndex: 'customer_address', width: 180, ellipsis: true },
+  { title: '客户机房详细地址', dataIndex: 'customer_address', ellipsis: true, minWidth: 140 },
   {
     title: '工单状态', dataIndex: 'status', width: 90,
     render: (v) => <Tag color={statusColors[v]}>{statusLabels[v] || v}</Tag>,
   },
   { title: '当前环节名称', dataIndex: 'current_step', width: 120 },
-  { title: '摄像头安装位置', dataIndex: 'camera_install_location', width: 150, ellipsis: true },
-  { title: '产品实例编号', dataIndex: 'product_instance_id', width: 150, ellipsis: true },
+  { title: '摄像头安装位置', dataIndex: 'camera_install_location', ellipsis: true, minWidth: 120 },
+  { title: '产品实例编号', dataIndex: 'product_instance_id', ellipsis: true, minWidth: 120 },
 ];
 
 export default function WorkOrderList({ isAdmin, operationType, pageTitle }) {
@@ -198,7 +198,7 @@ export default function WorkOrderList({ isAdmin, operationType, pageTitle }) {
         columns={columns}
         dataSource={data}
         loading={loading}
-        scroll={{ x: 2200 }}
+        scroll={{ x: 'max-content' }}
         pagination={{
           current: page,
           pageSize,

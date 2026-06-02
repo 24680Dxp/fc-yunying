@@ -111,7 +111,7 @@ function AppLayout() {
 
   return (
     <Layout style={{ minHeight: '100vh' }}>
-      <Sider>
+      <Sider width={200}>
         <div style={{
           height: 64,
           display: 'flex',

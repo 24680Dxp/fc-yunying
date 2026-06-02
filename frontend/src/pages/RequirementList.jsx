@@ -21,15 +21,15 @@ const statusColors = {
 // 10 个业务字段的列定义
 const columns = [
   { title: '接收日期', dataIndex: 'receive_date', width: 100 },
-  { title: '市', dataIndex: 'city', width: 90 },
-  { title: '区/县', dataIndex: 'district', width: 90 },
+  { title: '市', dataIndex: 'city', width: 80 },
+  { title: '区/县', dataIndex: 'district', width: 80 },
   { title: '网点号', dataIndex: 'outlet_code', width: 110 },
-  { title: '业主姓名', dataIndex: 'owner_name', width: 100 },
+  { title: '业主姓名', dataIndex: 'owner_name', minWidth: 90 },
   { title: '联系方式', dataIndex: 'contact', width: 120 },
   { title: '工单类型', dataIndex: 'order_type', width: 100 },
-  { title: '安装地址', dataIndex: 'install_address', ellipsis: true, width: 200 },
+  { title: '安装地址', dataIndex: 'install_address', ellipsis: true, minWidth: 160 },
   { title: '产品编码', dataIndex: 'product_code', width: 130 },
-  { title: '备注', dataIndex: 'remark', ellipsis: true, width: 180 },
+  { title: '备注', dataIndex: 'remark', ellipsis: true, minWidth: 140 },
 ];
 
 export default function RequirementList() {
@@ -169,7 +169,7 @@ export default function RequirementList() {
         ]}
         dataSource={data}
         loading={loading}
-        scroll={{ x: 1500 }}
+        scroll={{ x: 'max-content' }}
         pagination={{
           current: page,
           pageSize,
