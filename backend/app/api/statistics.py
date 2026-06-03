@@ -32,6 +32,16 @@ class CrossStatItem(BaseModel):
     total: int
 
 
+class ActiveByCityDetail(BaseModel):
+    name: str
+    total: int
+    qianliyan_open: int
+    qianliyan_adjust: int
+    qianliyan_cancel: int
+    internet_open: int
+    internet_cancel: int
+
+
 @router.get("/total")
 def get_total_stats(db: Session = Depends(get_db)):
     total_work_orders = db.execute(select(func.count()).select_from(WorkOrder)).scalar()
@@ -115,6 +125,62 @@ def stats_active_by_city(db: Session = Depends(get_db)):
     for city, cnt in rows:
         name = city if city and city.strip() else "未知"
         result.append(GroupCount(name=name, count=cnt))
+    return result
+
+
+@router.get("/active-by-city-detail", response_model=List[ActiveByCityDetail])
+def stats_active_by_city_detail(db: Session = Depends(get_db)):
+    """在途工单按地市展开：总在途、千里眼开通/调整/取消、互联网开通/取消"""
+    rows = db.execute(
+        select(
+            WorkOrder.business_location_city,
+            WorkOrder.product_category,
+            WorkOrder.operation_type,
+            func.count().label("cnt"),
+        )
+        .where(WorkOrder.status == "开通中")
+        .group_by(
+            WorkOrder.business_location_city,
+            WorkOrder.product_category,
+            WorkOrder.operation_type,
+        )
+        .order_by(WorkOrder.business_location_city)
+    ).all()
+
+    agg = {}
+    for city, cat, op_type, cnt in rows:
+        city_key = city if city and city.strip() else "未知"
+        if city_key not in agg:
+            agg[city_key] = {"total": 0, "qianliyan_open": 0, "qianliyan_adjust": 0,
+                             "qianliyan_cancel": 0, "internet_open": 0, "internet_cancel": 0}
+        agg[city_key]["total"] += cnt
+
+        is_qianliyan = cat in ("视频算力一张网", "接入和云存储功能费用")
+        if is_qianliyan:
+            if op_type == "业务开通":
+                agg[city_key]["qianliyan_open"] += cnt
+            elif op_type == "业务调整":
+                agg[city_key]["qianliyan_adjust"] += cnt
+            elif op_type == "业务取消":
+                agg[city_key]["qianliyan_cancel"] += cnt
+        else:
+            if op_type == "业务开通":
+                agg[city_key]["internet_open"] += cnt
+            elif op_type == "业务取消":
+                agg[city_key]["internet_cancel"] += cnt
+
+    result = []
+    for name in sorted(agg.keys(), key=lambda k: -agg[k]["total"]):
+        v = agg[name]
+        result.append(ActiveByCityDetail(
+            name=name,
+            total=v["total"],
+            qianliyan_open=v["qianliyan_open"],
+            qianliyan_adjust=v["qianliyan_adjust"],
+            qianliyan_cancel=v["qianliyan_cancel"],
+            internet_open=v["internet_open"],
+            internet_cancel=v["internet_cancel"],
+        ))
     return result
 
 

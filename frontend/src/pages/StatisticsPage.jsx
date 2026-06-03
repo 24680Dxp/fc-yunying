@@ -17,6 +17,7 @@ import {
   getStatisticsByStatus,
   getStatisticsByCity,
   getStatisticsActiveByCity,
+  getStatisticsActiveByCityDetail,
   getStatisticsCrossOperationCategory,
 } from '../api';
 
@@ -30,6 +31,7 @@ export default function StatisticsPage() {
   const [byStatus, setByStatus] = useState([]);
   const [byCity, setByCity] = useState([]);
   const [activeByCity, setActiveByCity] = useState([]);
+  const [activeByCityDetail, setActiveByCityDetail] = useState([]);
   const [crossData, setCrossData] = useState([]);
 
   useEffect(() => {
@@ -40,14 +42,16 @@ export default function StatisticsPage() {
       getStatisticsByStatus(),
       getStatisticsByCity(),
       getStatisticsActiveByCity(),
+      getStatisticsActiveByCityDetail(),
       getStatisticsCrossOperationCategory(),
-    ]).then(([totalRes, opRes, catRes, statusRes, cityRes, activeCityRes, crossRes]) => {
+    ]).then(([totalRes, opRes, catRes, statusRes, cityRes, activeCityRes, activeDetailRes, crossRes]) => {
       setTotal(totalRes.data);
       setByOperationType(opRes.data);
       setByProductCategory(catRes.data);
       setByStatus(statusRes.data);
       setByCity(cityRes.data);
       setActiveByCity(activeCityRes.data);
+      setActiveByCityDetail(activeDetailRes.data);
       setCrossData(crossRes.data);
     }).catch(() => {
     }).finally(() => setLoading(false));
@@ -62,6 +66,18 @@ export default function StatisticsPage() {
   const archivedCount = total?.archived_work_orders || 0;
   const totalRequirements = total?.total_requirements || 0;
   const activeTotal = activeByCity.reduce((s, i) => s + i.count, 0);
+
+  // 合计行：active-by-city-detail
+  const detailTotalRow = {
+    name: '合计',
+    total: activeByCityDetail.reduce((s, r) => s + r.total, 0),
+    qianliyan_open: activeByCityDetail.reduce((s, r) => s + r.qianliyan_open, 0),
+    qianliyan_adjust: activeByCityDetail.reduce((s, r) => s + r.qianliyan_adjust, 0),
+    qianliyan_cancel: activeByCityDetail.reduce((s, r) => s + r.qianliyan_cancel, 0),
+    internet_open: activeByCityDetail.reduce((s, r) => s + r.internet_open, 0),
+    internet_cancel: activeByCityDetail.reduce((s, r) => s + r.internet_cancel, 0),
+  };
+  const detailWithTotal = [...activeByCityDetail, detailTotalRow];
 
   // 合并表合计行
   const crossTotal = {
@@ -127,6 +143,7 @@ export default function StatisticsPage() {
               dataSource={crossWithTotal}
               pagination={false}
               size="small"
+              scroll={{ x: 600 }}
               columns={[
                 { title: '操作类型', dataIndex: 'operation_type', width: 120,
                   render: (v, r) => r.operation_type === '合计'
@@ -160,32 +177,56 @@ export default function StatisticsPage() {
           </Card>
         </Col>
 
-        <Col xs={24} md={12}>
-          <Card title={<Space><RiseOutlined />在途工单统计（开通中，共 {activeTotal} 条）</Space>} style={cardStyle}>
+        <Col xs={24}>
+          <Card
+            title={<Space><RiseOutlined />在途工单统计（开通中，共 {activeTotal} 条）</Space>}
+            style={cardStyle}
+          >
             <Table
               rowKey="name"
-              dataSource={activeByCity}
-              pagination={{ pageSize: 10, showTotal: (t) => `共 ${t} 个城市` }}
+              dataSource={detailWithTotal}
+              pagination={false}
               size="small"
+              scroll={{ x: 1100 }}
               columns={[
-                { title: '地市', dataIndex: 'name', width: 120 },
                 {
-                  title: '在途工单数', dataIndex: 'count', width: 100,
-                  render: (v) => <span style={{ fontWeight: 600, color: '#faad14' }}>{v}</span>,
+                  title: '地市', dataIndex: 'name', width: 100, fixed: 'left',
+                  render: (v, r) => r.name === '合计'
+                    ? <span style={{ fontWeight: 700 }}>{v}</span>
+                    : v,
                 },
                 {
-                  title: '占比', width: 100,
-                  render: (_, r) => {
-                    const pct = activeTotal ? ((r.count / activeTotal) * 100).toFixed(1) : 0;
-                    return <span>{pct}%</span>;
-                  },
+                  title: '在途工单总数', dataIndex: 'total', width: 110,
+                  render: (v, r) => r.name === '合计'
+                    ? <span style={{ fontWeight: 700, color: '#faad14' }}>{v}</span>
+                    : <span style={{ fontWeight: 600, color: '#faad14' }}>{v}</span>,
+                },
+                {
+                  title: '千里眼开通在途', dataIndex: 'qianliyan_open', width: 120,
+                  render: (v, r) => r.name === '合计' ? <span style={{ fontWeight: 700, color: '#1890ff' }}>{v}</span> : <span style={{ color: '#1890ff' }}>{v}</span>,
+                },
+                {
+                  title: '千里眼调整在途', dataIndex: 'qianliyan_adjust', width: 120,
+                  render: (v, r) => r.name === '合计' ? <span style={{ fontWeight: 700, color: '#1890ff' }}>{v}</span> : <span style={{ color: '#1890ff' }}>{v}</span>,
+                },
+                {
+                  title: '千里眼取消在途', dataIndex: 'qianliyan_cancel', width: 120,
+                  render: (v, r) => r.name === '合计' ? <span style={{ fontWeight: 700, color: '#1890ff' }}>{v}</span> : <span style={{ color: '#1890ff' }}>{v}</span>,
+                },
+                {
+                  title: '互联网开通在途', dataIndex: 'internet_open', width: 120,
+                  render: (v, r) => r.name === '合计' ? <span style={{ fontWeight: 700, color: '#1890ff' }}>{v}</span> : <span style={{ color: '#1890ff' }}>{v}</span>,
+                },
+                {
+                  title: '互联网取消在途', dataIndex: 'internet_cancel', width: 120,
+                  render: (v, r) => r.name === '合计' ? <span style={{ fontWeight: 700, color: '#1890ff' }}>{v}</span> : <span style={{ color: '#1890ff' }}>{v}</span>,
                 },
               ]}
             />
           </Card>
         </Col>
 
-        <Col xs={24} md={12}>
+        <Col xs={24}>
           <Card title={<Space><BarChartOutlined />按业务所属地市统计</Space>} style={cardStyle}>
             <Table
               rowKey="name"
