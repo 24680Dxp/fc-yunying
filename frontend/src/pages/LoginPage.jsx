@@ -34,7 +34,7 @@ export default function LoginPage() {
     }}>
       <Card style={{ width: 400 }}>
         <Title level={3} style={{ textAlign: 'center', marginBottom: 32 }}>
-          福彩项目运营管理系统
+          FC项目交互支撑系统
         </Title>
         <Form onFinish={handleSubmit} size="large">
           <Form.Item name="username" rules={[{ required: true, message: '请输入用户名' }]}>

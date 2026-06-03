@@ -122,7 +122,7 @@ function AppLayout() {
           fontWeight: 'bold',
           borderBottom: '1px solid rgba(255,255,255,0.1)',
         }}>
-          福彩项目运营管理系统
+          FC项目交互支撑系统
         </div>
         <Menu
           theme="dark"

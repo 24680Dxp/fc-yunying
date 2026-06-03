@@ -32,7 +32,7 @@ if not db.query(User).filter(User.username == "user").first():
     db.commit()
 db.close()
 
-app = FastAPI(title="福彩项目运营管理系统", version="1.0.0", docs_url="/docs")
+app = FastAPI(title="FC项目交互支撑系统", version="1.0.0", docs_url="/docs")
 
 # CORS — allow all origins for development
 app.add_middleware(
@@ -52,4 +52,4 @@ app.include_router(statistics.router)
 
 @app.get("/")
 def root():
-    return {"message": "福彩项目运营管理系统 API", "version": "1.0.0"}
+    return {"message": "FC项目交互支撑系统 API", "version": "1.0.0"}
