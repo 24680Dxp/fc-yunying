@@ -2,10 +2,11 @@ import React, { useState, useEffect } from 'react';
 import {
   Table, Button, Modal, Form, Input, Select, Space, Tag, Tooltip, message, Popconfirm,
 } from 'antd';
-import { PlusOutlined, EditOutlined, DeleteOutlined, SearchOutlined } from '@ant-design/icons';
+import { PlusOutlined, EditOutlined, DeleteOutlined, SearchOutlined, DownloadOutlined } from '@ant-design/icons';
 import {
-  getRequirements, createRequirement, updateRequirement, deleteRequirement,
+  getRequirements, createRequirement, updateRequirement, deleteRequirement, exportRequirements,
 } from '../api';
+import { isAdmin } from '../api/auth';
 import { guangdongCities, cityDistricts } from '../data/guangdong';
 
 const { TextArea } = Input;
@@ -179,6 +180,24 @@ export default function RequirementList() {
     }
   };
 
+  const handleExport = async () => {
+    try {
+      const res = await exportRequirements(filters);
+      // 触发浏览器下载
+      const url = URL.createObjectURL(new Blob([res.data], { type: 'text/csv;charset=utf-8;' }));
+      const link = document.createElement('a');
+      link.href = url;
+      link.setAttribute('download', `需求列表_${new Date().toISOString().slice(0, 10)}.csv`);
+      document.body.appendChild(link);
+      link.click();
+      document.body.removeChild(link);
+      URL.revokeObjectURL(url);
+      message.success('导出成功');
+    } catch {
+      message.error('导出失败');
+    }
+  };
+
   const orderTypeSelectOptions = orderTypeOptions.map(v => ({ label: v, value: v }));
 
   return (
@@ -210,9 +229,16 @@ export default function RequirementList() {
             options={orderTypeSelectOptions}
           />
         </Space>
-        <Button type="primary" icon={<PlusOutlined />} onClick={openCreate}>
-          新增需求
-        </Button>
+        <Space>
+          {isAdmin() && (
+            <Button icon={<DownloadOutlined />} onClick={handleExport}>
+              导出
+            </Button>
+          )}
+          <Button type="primary" icon={<PlusOutlined />} onClick={openCreate}>
+            新增需求
+          </Button>
+        </Space>
       </Space>
 
       <Table

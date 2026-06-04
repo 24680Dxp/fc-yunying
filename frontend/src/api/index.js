@@ -38,6 +38,14 @@ export function getRequirements(params = {}) {
   return api.get('/requirements/', { params });
 }
 
+export function exportRequirements(params = {}) {
+  // 直接返回 blob，触发下载
+  return authApi.get('/requirements/export', {
+    params,
+    responseType: 'blob',
+  });
+}
+
 export function getRequirement(id) {
   return api.get(`/requirements/${id}`);
 }

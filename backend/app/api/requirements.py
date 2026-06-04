@@ -1,6 +1,9 @@
+import csv
+from io import StringIO
 from typing import Optional
 
 from fastapi import APIRouter, Depends, HTTPException, Query
+from fastapi.responses import StreamingResponse
 from sqlalchemy.orm import Session
 
 from app.database import get_db
@@ -13,6 +16,59 @@ from app.schemas.requirement import (
 from app.services.requirement_service import RequirementService, attach_req_status
 
 router = APIRouter(prefix="/api/v1/requirements", tags=["需求管理"])
+
+
+EXPORT_HEADERS = [
+    ("receive_date", "接收日期"),
+    ("req_status", "需求状态"),
+    ("owner_name", "业主姓名"),
+    ("contact", "联系方式"),
+    ("city", "市"),
+    ("district", "区/县"),
+    ("outlet_code", "网点号"),
+    ("order_type", "工单类型"),
+    ("install_address", "安装地址"),
+    ("remark", "备注"),
+]
+
+
+@router.get("/export")
+def export_requirements(
+    search: Optional[str] = Query(None),
+    city: Optional[str] = Query(None, description="市"),
+    district: Optional[str] = Query(None, description="区/县"),
+    order_type: Optional[str] = Query(None, description="工单类型"),
+    db: Session = Depends(get_db),
+):
+    """导出需求列表为 CSV（支持当前筛选条件）"""
+    items, _ = RequirementService.list_requirements(
+        db,
+        skip=0,
+        limit=100000,
+        search=search,
+        city=city,
+        district=district,
+        order_type=order_type,
+    )
+
+    output = StringIO()
+    writer = csv.writer(output)
+    writer.writerow([h[1] for h in EXPORT_HEADERS])
+
+    for r in items:
+        req_status = attach_req_status(r, db)
+        writer.writerow([
+            getattr(r, field, "")
+            if field != "req_status" else req_status
+            for field, _ in EXPORT_HEADERS
+        ])
+
+    output.seek(0)
+    return StreamingResponse(
+        iter([output.getvalue()]),
+        media_type="text/csv; charset=utf-8-sig",
+        headers={"Content-Disposition": "attachment; filename=requirements.csv"},
+   )
 
 
 def _enrich(requirement_obj, db: Session) -> RequirementResponse:
