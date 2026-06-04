@@ -4,7 +4,61 @@ from sqlalchemy import func, select
 from sqlalchemy.orm import Session
 
 from app.models.requirement import Requirement
+from app.models.work_order import WorkOrder
 from app.schemas.requirement import RequirementCreate, RequirementUpdate
+
+# 工单类型 → operation_type 映射
+ORDER_TYPE_TO_OP = {
+    '网点新增': '业务开通',
+    '网点迁移': '业务调整',
+    '网点注销': '业务取消',
+}
+
+
+def _extract_site_code(text: str) -> str:
+    """从文本中提取8位站点编号"""
+    import re
+    m = re.search(r'\d{8}', text or '')
+    return m.group() if m else ''
+
+
+def _compute_req_status(req: Requirement, db: Session) -> str:
+    """根据需求的工单类型和网点号，匹配工单清单计算需求状态"""
+    order_type = req.order_type or ''
+    outlet_code = req.outlet_code or ''
+
+    # 非网点类工单默认"待开发"
+    if order_type not in ('网点新增', '网点迁移', '网点注销'):
+        return '待开发'
+
+    op_type = ORDER_TYPE_TO_OP.get(order_type)
+    if not op_type:
+        return '待评审'
+
+    # 查询匹配的工单（同一个 operation_type，且包含该网点号）
+    query = select(WorkOrder).where(
+        WorkOrder.operation_type == op_type,
+    )
+    work_orders = list(db.execute(query).scalars().all())
+
+    # 用网点号匹配工单的站点编号
+    matched_wo = None
+    for wo in work_orders:
+        addr = wo.customer_address or ''
+        cam = wo.camera_install_location or ''
+        site_code = _extract_site_code(addr) or _extract_site_code(cam)
+        if site_code == outlet_code:
+            matched_wo = wo
+            break
+
+    if not matched_wo:
+        return '待评审'
+
+    # 匹配到了，看工单状态
+    if matched_wo.status == '已归档':
+        return '已完工'
+    else:
+        return '处理中'
 
 
 class RequirementService:
@@ -92,3 +146,8 @@ class RequirementService:
         req.status = "closed"
         db.commit()
         return True
+
+
+def attach_req_status(req: Requirement, db: Session) -> str:
+    """计算需求的 req_status 并返回"""
+    return _compute_req_status(req, db)

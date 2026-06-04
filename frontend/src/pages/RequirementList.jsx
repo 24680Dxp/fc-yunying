@@ -1,11 +1,12 @@
 import React, { useState, useEffect } from 'react';
 import {
-  Table, Button, Modal, Form, Input, Select, Space, Tag, message, Popconfirm,
+  Table, Button, Modal, Form, Input, Select, Space, Tag, Tooltip, message, Popconfirm,
 } from 'antd';
 import { PlusOutlined, EditOutlined, DeleteOutlined, SearchOutlined } from '@ant-design/icons';
 import {
   getRequirements, createRequirement, updateRequirement, deleteRequirement,
 } from '../api';
+import { guangdongCities, cityDistricts } from '../data/guangdong';
 
 const { TextArea } = Input;
 
@@ -18,19 +19,78 @@ const statusColors = {
   completed: 'green', closed: 'default', rejected: 'error',
 };
 
-// 10 个业务字段的列定义
+// 需求状态定义
+const reqStatusLabels = {
+  '待评审': '待评审',
+  '处理中': '处理中',
+  '已完工': '已完工',
+  '待开发': '待开发',
+};
+const reqStatusColors = {
+  '待评审': 'default',
+  '处理中': 'processing',
+  '已完工': 'success',
+  '待开发': 'orange',
+};
+
+// 工单类型选项
+const orderTypeOptions = [
+  '网点新增', '网点迁移', '网点注销', '故障报修', '其他（请备注）',
+];
+
+// 业务字段列定义（按逻辑分组排列）
 const columns = [
+  // ---- 基本信息 ----
   { title: '接收日期', dataIndex: 'receive_date', width: 100 },
+  // ---- 需求状态 ----
+  {
+    title: '需求状态', dataIndex: 'req_status', width: 100,
+    render: (v) => <Tag color={reqStatusColors[v] || 'default'}>{v || '待开发'}</Tag>,
+  },
+  // ---- 联系人 ----
+  {
+    title: '业主姓名', dataIndex: 'owner_name', minWidth: 90,
+    render: (v) => v ? <Tooltip title={v}><span style={{ cursor: 'pointer' }}>{maskName(v)}</span></Tooltip> : '',
+  },
+  {
+    title: '联系方式', dataIndex: 'contact', width: 120,
+    render: (v) => v ? <Tooltip title={v}><span style={{ cursor: 'pointer' }}>{maskPhone(v)}</span></Tooltip> : '',
+  },
+  // ---- 网点位置 ----
   { title: '市', dataIndex: 'city', width: 80 },
   { title: '区/县', dataIndex: 'district', width: 80 },
   { title: '网点号', dataIndex: 'outlet_code', width: 110 },
-  { title: '业主姓名', dataIndex: 'owner_name', minWidth: 90 },
-  { title: '联系方式', dataIndex: 'contact', width: 120 },
+  // ---- 业务类型 ----
   { title: '工单类型', dataIndex: 'order_type', width: 100 },
+  // ---- 详细地址 ----
   { title: '安装地址', dataIndex: 'install_address', ellipsis: true, minWidth: 160 },
-  { title: '产品编码', dataIndex: 'product_code', width: 130 },
+  // ---- 补充说明 ----
   { title: '备注', dataIndex: 'remark', ellipsis: true, minWidth: 140 },
 ];
+
+// 格式化日期为 YYYY-MM-DD
+function todayStr() {
+  const d = new Date();
+  const y = d.getFullYear();
+  const m = String(d.getMonth() + 1).padStart(2, '0');
+  const day = String(d.getDate()).padStart(2, '0');
+  return `${y}-${m}-${day}`;
+}
+
+// 隐私脱敏
+function maskName(name) {
+  if (!name) return '';
+  if (name.length <= 1) return '*';
+  return name[0] + '*'.repeat(name.length - 1);
+}
+function maskPhone(phone) {
+  if (!phone) return '';
+  // 手机号: 138****1234
+  if (phone.length >= 11) return phone.slice(0, 3) + '****' + phone.slice(-4);
+  // 固话或其他: 保留前后各2位
+  if (phone.length >= 6) return phone.slice(0, 2) + '****' + phone.slice(-2);
+  return phone[0] + '****';
+}
 
 export default function RequirementList() {
   const [data, setData] = useState([]);
@@ -42,7 +102,11 @@ export default function RequirementList() {
   const [editing, setEditing] = useState(null);
   const [search, setSearch] = useState('');
   const [filters, setFilters] = useState({});
+  const [selectedCity, setSelectedCity] = useState(undefined);
   const [form] = Form.useForm();
+
+  // 获取当前市的区县列表
+  const districts = selectedCity ? (cityDistricts[selectedCity] || []) : [];
 
   const fetchData = async () => {
     setLoading(true);
@@ -72,12 +136,19 @@ export default function RequirementList() {
   const openCreate = () => {
     setEditing(null);
     form.resetFields();
+    // 接收日期自动设为当前日期
+    form.setFieldsValue({
+      receive_date: todayStr(),
+      order_type: '网点新增',
+    });
+    setSelectedCity(undefined);
     setModalOpen(true);
   };
 
   const openEdit = (record) => {
     setEditing(record);
     form.setFieldsValue(record);
+    setSelectedCity(record.city || undefined);
     setModalOpen(true);
   };
 
@@ -108,12 +179,14 @@ export default function RequirementList() {
     }
   };
 
+  const orderTypeSelectOptions = orderTypeOptions.map(v => ({ label: v, value: v }));
+
   return (
     <div>
       <Space style={{ marginBottom: 16, width: '100%', justifyContent: 'space-between' }}>
         <Space wrap>
           <Input
-            placeholder="搜索业主姓名/网点号/联系方式"
+            placeholder="搜索网点编号/业主姓名/联系方式"
             prefix={<SearchOutlined />}
             value={search}
             onChange={(e) => setSearch(e.target.value)}
@@ -126,23 +199,15 @@ export default function RequirementList() {
             style={{ width: 110 }}
             value={filters.city}
             onChange={(v) => setFilters({ ...filters, city: v })}
-            options={[
-              { label: '广州市', value: '广州市' },
-              { label: '深圳市', value: '深圳市' },
-            ]}
+            options={guangdongCities.map(c => ({ label: c, value: c }))}
           />
           <Select
             placeholder="工单类型"
             allowClear
-            style={{ width: 120 }}
+            style={{ width: 130 }}
             value={filters.order_type}
             onChange={(v) => setFilters({ ...filters, order_type: v })}
-            options={[
-              { label: '宽带安装', value: '宽带安装' },
-              { label: '故障维修', value: '故障维修' },
-              { label: '移机', value: '移机' },
-              { label: '注销', value: '注销' },
-            ]}
+            options={orderTypeSelectOptions}
           />
         </Space>
         <Button type="primary" icon={<PlusOutlined />} onClick={openCreate}>
@@ -188,42 +253,45 @@ export default function RequirementList() {
         destroyOnClose
       >
         <Form form={form} layout="vertical" style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '0 24px' }}>
+          {/* 基本信息 */}
           <Form.Item name="receive_date" label="接收日期">
-            <Input placeholder="如: 2026-06-01" />
+            <Input disabled />
           </Form.Item>
-          <Form.Item name="city" label="市">
+          <Form.Item name="order_type" label="工单类型" rules={[{ required: true, message: '请选择工单类型' }]}>
             <Select
-              options={[
-                { label: '广州市', value: '广州市' },
-                { label: '深圳市', value: '深圳市' },
-              ]}
+              placeholder="选择工单类型"
+              options={orderTypeSelectOptions}
             />
           </Form.Item>
-          <Form.Item name="district" label="区/县">
-            <Input />
-          </Form.Item>
-          <Form.Item name="outlet_code" label="网点号">
-            <Input />
-          </Form.Item>
+          {/* 联系人 */}
           <Form.Item name="owner_name" label="业主姓名">
             <Input />
           </Form.Item>
           <Form.Item name="contact" label="联系方式">
             <Input />
           </Form.Item>
-          <Form.Item name="order_type" label="工单类型">
+          {/* 网点位置 */}
+          <Form.Item name="city" label="市" rules={[{ required: true, message: '请选择市' }]}>
             <Select
-              options={[
-                { label: '宽带安装', value: '宽带安装' },
-                { label: '故障维修', value: '故障维修' },
-                { label: '移机', value: '移机' },
-                { label: '注销', value: '注销' },
-              ]}
+              placeholder="选择市"
+              options={guangdongCities.map(c => ({ label: c, value: c }))}
+              onChange={(v) => {
+                setSelectedCity(v);
+                form.setFieldsValue({ district: undefined });
+              }}
             />
           </Form.Item>
-          <Form.Item name="product_code" label="产品编码">
+          <Form.Item name="district" label="区/县" rules={[{ required: true, message: '请选择区/县' }]}>
+            <Select
+              placeholder="选择区/县"
+              options={districts.map(d => ({ label: d, value: d }))}
+              disabled={!selectedCity}
+            />
+          </Form.Item>
+          <Form.Item name="outlet_code" label="网点号">
             <Input />
           </Form.Item>
+          {/* 补充信息（占整行） */}
           <Form.Item name="install_address" label="安装地址"
             style={{ gridColumn: '1 / -1' }}>
             <TextArea rows={2} />
