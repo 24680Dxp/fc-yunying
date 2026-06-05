@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useCallback } from 'react';
 import {
   Table, Button, Modal, Form, Input, Select, Space, Tag, Tooltip, message, Popconfirm,
 } from 'antd';
@@ -8,6 +8,8 @@ import {
 } from '../api';
 import { isAdmin } from '../api/auth';
 import { guangdongCities, cityDistricts } from '../data/guangdong';
+import ResizableTitle from '../components/ResizableTitle';
+import 'react-resizable/css/styles.css';
 
 const { TextArea } = Input;
 
@@ -40,33 +42,33 @@ const orderTypeOptions = [
 ];
 
 // 业务字段列定义（按逻辑分组排列）
-const columns = [
+const baseColumns = [
   // ---- 基本信息 ----
-  { title: '接收日期', dataIndex: 'receive_date', width: 100 },
+  { title: '接收日期', dataIndex: 'receive_date', width: 100, resizable: true },
   // ---- 需求状态 ----
   {
-    title: '需求状态', dataIndex: 'req_status', width: 100,
+    title: '需求状态', dataIndex: 'req_status', width: 100, resizable: true,
     render: (v) => <Tag color={reqStatusColors[v] || 'default'}>{v || '待开发'}</Tag>,
   },
   // ---- 联系人 ----
   {
-    title: '业主姓名', dataIndex: 'owner_name', minWidth: 90,
+    title: '业主姓名', dataIndex: 'owner_name', minWidth: 90, resizable: true,
     render: (v) => v ? <Tooltip title={v}><span style={{ cursor: 'pointer' }}>{maskName(v)}</span></Tooltip> : '',
   },
   {
-    title: '联系方式', dataIndex: 'contact', width: 120,
+    title: '联系方式', dataIndex: 'contact', width: 120, resizable: true,
     render: (v) => v ? <Tooltip title={v}><span style={{ cursor: 'pointer' }}>{maskPhone(v)}</span></Tooltip> : '',
   },
   // ---- 网点位置 ----
-  { title: '市', dataIndex: 'city', width: 80 },
-  { title: '区/县', dataIndex: 'district', width: 80 },
-  { title: '网点号', dataIndex: 'outlet_code', width: 110 },
+  { title: '市', dataIndex: 'city', width: 80, resizable: true },
+  { title: '区/县', dataIndex: 'district', width: 80, resizable: true },
+  { title: '网点号', dataIndex: 'outlet_code', width: 110, resizable: true },
   // ---- 业务类型 ----
-  { title: '工单类型', dataIndex: 'order_type', width: 100 },
+  { title: '工单类型', dataIndex: 'order_type', width: 100, resizable: true },
   // ---- 详细地址 ----
-  { title: '安装地址', dataIndex: 'install_address', ellipsis: true, minWidth: 160 },
+  { title: '安装地址', dataIndex: 'install_address', ellipsis: true, minWidth: 160, resizable: true },
   // ---- 补充说明 ----
-  { title: '备注', dataIndex: 'remark', ellipsis: true, minWidth: 140 },
+  { title: '备注', dataIndex: 'remark', ellipsis: true, minWidth: 140, resizable: true },
 ];
 
 // 格式化日期为 YYYY-MM-DD
@@ -105,6 +107,65 @@ export default function RequirementList() {
   const [filters, setFilters] = useState({});
   const [selectedCity, setSelectedCity] = useState(undefined);
   const [form] = Form.useForm();
+
+  // 可拖拽列宽（持久化到 localStorage）
+  const STORAGE_KEY = 'fc_req_col_widths';
+  const [colWidths, setColWidths] = useState(() => {
+    try {
+      return JSON.parse(localStorage.getItem(STORAGE_KEY) || '{}');
+    } catch { return {}; }
+  });
+
+  // 持久化宽度变化
+  const persistWidths = useCallback((updater) => {
+    setColWidths((prev) => {
+      const next = typeof updater === 'function' ? updater(prev) : updater;
+      localStorage.setItem(STORAGE_KEY, JSON.stringify(next));
+      return next;
+    });
+  }, []);
+
+  const components = {
+    header: {
+      cell: ResizableTitle,
+    },
+  };
+
+  const handleResize = useCallback((index) => (e, { size }) => {
+    persistWidths((prev) => ({ ...prev, [index]: size.width }));
+  }, [persistWidths]);
+
+  // 给 columns 注入可拖拽属性和当前宽度
+  const columns = baseColumns.map((col, index) => ({
+    ...col,
+    width: colWidths[index] || col.width,
+    onHeaderCell: () => ({
+      width: colWidths[index] || col.width,
+      onResize: handleResize(index),
+    }),
+  }));
+
+  const resizableColumns = [
+    ...columns,
+    {
+      title: '操作', width: 120, fixed: 'right',
+      render: (_, record) => (
+        <Space>
+          {isAdmin() ? (
+            <>
+              <Button type="link" size="small" icon={<EditOutlined />}
+                onClick={() => openEdit(record)}>编辑</Button>
+              <Popconfirm title="确认删除此需求？" onConfirm={() => handleDelete(record.id)}>
+                <Button type="link" size="small" danger icon={<DeleteOutlined />}>删除</Button>
+              </Popconfirm>
+            </>
+          ) : (
+            <span style={{ color: '#999' }}>--</span>
+          )}
+        </Space>
+      ),
+    },
+  ];
 
   // 获取当前市的区县列表
   const districts = selectedCity ? (cityDistricts[selectedCity] || []) : [];
@@ -262,27 +323,8 @@ export default function RequirementList() {
 
       <Table
         rowKey="id"
-        columns={[
-          ...columns,
-          {
-            title: '操作', width: 120, fixed: 'right',
-            render: (_, record) => (
-              <Space>
-                {isAdmin() ? (
-                  <>
-                    <Button type="link" size="small" icon={<EditOutlined />}
-                      onClick={() => openEdit(record)}>编辑</Button>
-                    <Popconfirm title="确认删除此需求？" onConfirm={() => handleDelete(record.id)}>
-                      <Button type="link" size="small" danger icon={<DeleteOutlined />}>删除</Button>
-                    </Popconfirm>
-                  </>
-                ) : (
-                  <span style={{ color: '#999' }}>--</span>
-                )}
-              </Space>
-            ),
-          },
-        ]}
+        components={components}
+        columns={resizableColumns}
         dataSource={data}
         loading={loading}
         scroll={{ x: 'max-content' }}

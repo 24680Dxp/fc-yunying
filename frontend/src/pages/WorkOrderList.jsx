@@ -6,6 +6,8 @@ import { PlusOutlined, SearchOutlined, UploadOutlined } from '@ant-design/icons'
 import {
   getWorkOrders, createWorkOrder, uploadWorkOrders,
 } from '../api';
+import ResizableTitle from '../components/ResizableTitle';
+import 'react-resizable/css/styles.css';
 
 const { TextArea } = Input;
 
@@ -24,25 +26,25 @@ const guangdongCities = [
 ];
 
 // 14 个业务字段的列定义
-const columns = [
-  { title: '站点编号', dataIndex: 'site_code', width: 100 },
-  { title: 'CRM订单号', dataIndex: 'crm_order_id', width: 140, ellipsis: true },
-  { title: '工单号', dataIndex: 'order_no', width: 160, ellipsis: true },
+const baseColumns = [
+  { title: '站点编号', dataIndex: 'site_code', width: 100, resizable: true },
+  { title: 'CRM订单号', dataIndex: 'crm_order_id', width: 140, ellipsis: true, resizable: true },
+  { title: '工单号', dataIndex: 'order_no', width: 160, ellipsis: true, resizable: true },
   {
-    title: '工单状态', dataIndex: 'status', width: 90,
+    title: '工单状态', dataIndex: 'status', width: 90, resizable: true,
     render: (v) => <Tag color={statusColors[v]}>{statusLabels[v] || v}</Tag>,
   },
-  { title: '工单主题', dataIndex: 'title', ellipsis: true, minWidth: 160 },
-  { title: '派单时间', dataIndex: 'dispatch_time', width: 140 },
-  { title: '业务受理地市', dataIndex: 'business_city', width: 110 },
-  { title: '产品分类', dataIndex: 'product_category', width: 130 },
-  { title: '操作类型', dataIndex: 'operation_type', width: 100 },
-  { title: '集团产品号码', dataIndex: 'group_product_number', width: 130, ellipsis: true },
-  { title: '业务所属地市', dataIndex: 'business_location_city', width: 110 },
-  { title: '客户机房详细地址', dataIndex: 'customer_address', ellipsis: true, minWidth: 140 },
-  { title: '当前环节名称', dataIndex: 'current_step', width: 120 },
-  { title: '摄像头安装位置', dataIndex: 'camera_install_location', ellipsis: true, minWidth: 120 },
-  { title: '产品实例编号', dataIndex: 'product_instance_id', ellipsis: true, minWidth: 120 },
+  { title: '工单主题', dataIndex: 'title', ellipsis: true, minWidth: 160, resizable: true },
+  { title: '派单时间', dataIndex: 'dispatch_time', width: 140, resizable: true },
+  { title: '业务受理地市', dataIndex: 'business_city', width: 110, resizable: true },
+  { title: '产品分类', dataIndex: 'product_category', width: 130, resizable: true },
+  { title: '操作类型', dataIndex: 'operation_type', width: 100, resizable: true },
+  { title: '集团产品号码', dataIndex: 'group_product_number', width: 130, ellipsis: true, resizable: true },
+  { title: '业务所属地市', dataIndex: 'business_location_city', width: 110, resizable: true },
+  { title: '客户机房详细地址', dataIndex: 'customer_address', ellipsis: true, minWidth: 140, resizable: true },
+  { title: '当前环节名称', dataIndex: 'current_step', width: 120, resizable: true },
+  { title: '摄像头安装位置', dataIndex: 'camera_install_location', ellipsis: true, minWidth: 120, resizable: true },
+  { title: '产品实例编号', dataIndex: 'product_instance_id', ellipsis: true, minWidth: 120, resizable: true },
 ];
 
 export default function WorkOrderList({ isAdmin, operationType, pageTitle }) {
@@ -58,6 +60,23 @@ export default function WorkOrderList({ isAdmin, operationType, pageTitle }) {
   const [cityFilter, setCityFilter] = useState(undefined);
   const [categoryFilter, setCategoryFilter] = useState(undefined);
   const [form] = Form.useForm();
+
+  // 可拖拽列宽（持久化到 localStorage）
+  const STORAGE_KEY = `fc_wo_col_widths_${operationType}`;
+  const [colWidths, setColWidths] = useState(() => {
+    try {
+      return JSON.parse(localStorage.getItem(STORAGE_KEY) || '{}');
+    } catch { return {}; }
+  });
+
+  // 持久化宽度变化
+  const persistWidths = useCallback((updater) => {
+    setColWidths((prev) => {
+      const next = typeof updater === 'function' ? updater(prev) : updater;
+      localStorage.setItem(STORAGE_KEY, JSON.stringify(next));
+      return next;
+    });
+  }, []);
 
   const fetchData = useCallback(async () => {
     setLoading(true);
@@ -90,6 +109,26 @@ export default function WorkOrderList({ isAdmin, operationType, pageTitle }) {
   }, [operationType]);
 
   useEffect(() => { fetchData(); }, [fetchData]);
+
+  const components = {
+    header: {
+      cell: ResizableTitle,
+    },
+  };
+
+  const handleResize = useCallback((index) => (e, { size }) => {
+    persistWidths((prev) => ({ ...prev, [index]: size.width }));
+  }, [persistWidths]);
+
+  // 给 columns 注入可拖拽属性和当前宽度
+  const columns = baseColumns.map((col, index) => ({
+    ...col,
+    width: colWidths[index] || col.width,
+    onHeaderCell: () => ({
+      width: colWidths[index] || col.width,
+      onResize: handleResize(index),
+    }),
+  }));
 
   const handleSearch = () => {
     setPage(1);
@@ -138,7 +177,7 @@ export default function WorkOrderList({ isAdmin, operationType, pageTitle }) {
       <Space style={{ marginBottom: 16, width: '100%', justifyContent: 'space-between' }}>
         <Space wrap>
           <Input
-            placeholder="搜索工单号/主题/CRM订单号"
+            placeholder="搜索工单号/主题/CRM订单号/站点编号"
             prefix={<SearchOutlined />}
             value={search}
             onChange={(e) => setSearch(e.target.value)}
@@ -196,6 +235,7 @@ export default function WorkOrderList({ isAdmin, operationType, pageTitle }) {
 
       <Table
         rowKey="id"
+        components={components}
         columns={columns}
         dataSource={data}
         loading={loading}

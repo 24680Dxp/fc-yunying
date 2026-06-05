@@ -94,6 +94,13 @@ class RequirementService:
         count_query = select(func.count()).select_from(Requirement)
         if filters:
             count_query = count_query.where(*filters)
+        if search:
+            count_query = count_query.where(
+                Requirement.owner_name.ilike(f"%{search}%")
+                | Requirement.outlet_code.ilike(f"%{search}%")
+                | Requirement.contact.ilike(f"%{search}%")
+                | Requirement.product_code.ilike(f"%{search}%")
+            )
         total = db.execute(count_query).scalar()
 
         # Build data query

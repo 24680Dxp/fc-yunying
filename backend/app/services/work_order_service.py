@@ -51,6 +51,14 @@ class WorkOrderService:
         count_query = select(func.count()).select_from(WorkOrder)
         if filters:
             count_query = count_query.where(*filters)
+        if search:
+            count_query = count_query.where(
+                WorkOrder.title.ilike(f"%{search}%")
+                | WorkOrder.order_no.ilike(f"%{search}%")
+                | WorkOrder.crm_order_id.ilike(f"%{search}%")
+                | WorkOrder.customer_address.ilike(f"%{search}%")
+                | WorkOrder.camera_install_location.ilike(f"%{search}%")
+            )
         total = db.execute(count_query).scalar()
 
         # Build data query
@@ -62,6 +70,8 @@ class WorkOrderService:
                 WorkOrder.title.ilike(f"%{search}%")
                 | WorkOrder.order_no.ilike(f"%{search}%")
                 | WorkOrder.crm_order_id.ilike(f"%{search}%")
+                | WorkOrder.customer_address.ilike(f"%{search}%")
+                | WorkOrder.camera_install_location.ilike(f"%{search}%")
             )
         data_query = data_query.order_by(WorkOrder.created_at.desc())
         data_query = data_query.offset(skip).limit(limit)
