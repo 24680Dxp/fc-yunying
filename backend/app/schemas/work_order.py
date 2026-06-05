@@ -57,6 +57,7 @@ class WorkOrderUpdate(BaseModel):
 class WorkOrderResponse(WorkOrderBase):
     id: int
     status: str
+    site_code: str = ""
     created_at: datetime
     updated_at: datetime
 

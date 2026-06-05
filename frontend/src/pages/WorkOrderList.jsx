@@ -25,8 +25,13 @@ const guangdongCities = [
 
 // 14 个业务字段的列定义
 const columns = [
+  { title: '站点编号', dataIndex: 'site_code', width: 100 },
   { title: 'CRM订单号', dataIndex: 'crm_order_id', width: 140, ellipsis: true },
   { title: '工单号', dataIndex: 'order_no', width: 160, ellipsis: true },
+  {
+    title: '工单状态', dataIndex: 'status', width: 90,
+    render: (v) => <Tag color={statusColors[v]}>{statusLabels[v] || v}</Tag>,
+  },
   { title: '工单主题', dataIndex: 'title', ellipsis: true, minWidth: 160 },
   { title: '派单时间', dataIndex: 'dispatch_time', width: 140 },
   { title: '业务受理地市', dataIndex: 'business_city', width: 110 },
@@ -35,10 +40,6 @@ const columns = [
   { title: '集团产品号码', dataIndex: 'group_product_number', width: 130, ellipsis: true },
   { title: '业务所属地市', dataIndex: 'business_location_city', width: 110 },
   { title: '客户机房详细地址', dataIndex: 'customer_address', ellipsis: true, minWidth: 140 },
-  {
-    title: '工单状态', dataIndex: 'status', width: 90,
-    render: (v) => <Tag color={statusColors[v]}>{statusLabels[v] || v}</Tag>,
-  },
   { title: '当前环节名称', dataIndex: 'current_step', width: 120 },
   { title: '摄像头安装位置', dataIndex: 'camera_install_location', ellipsis: true, minWidth: 120 },
   { title: '产品实例编号', dataIndex: 'product_instance_id', ellipsis: true, minWidth: 120 },

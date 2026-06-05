@@ -46,10 +46,22 @@ def list_work_orders(
     )
     return WorkOrderList(
         total=total,
-        items=[WorkOrderResponse.from_orm(r) for r in items],
+        items=[_inject_site_code(WorkOrderResponse.from_orm(r), r)
+               for r in items],
         skip=skip,
         limit=limit,
     )
+
+
+def _inject_site_code(item, orm_obj):
+    import re
+    m = re.search(r'\d{8}', orm_obj.customer_address or '')
+    if m:
+        item.site_code = m.group()
+    else:
+        m = re.search(r'\d{8}', orm_obj.camera_install_location or '')
+        item.site_code = m.group() if m else ''
+    return item
 
 
 @router.get("/cities", response_model=List[str])
