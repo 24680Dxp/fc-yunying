@@ -1,4 +1,4 @@
-from typing import Optional, Tuple, List
+from typing import List, Optional, Tuple
 
 from sqlalchemy import func, select
 from sqlalchemy.orm import Session
@@ -73,9 +73,9 @@ class RequirementService:
         priority: Optional[str] = None,
         status: Optional[str] = None,
         search: Optional[str] = None,
-        city: Optional[str] = None,
+        city: Optional[List[str]] = None,
         district: Optional[str] = None,
-        order_type: Optional[str] = None,
+        order_type: Optional[List[str]] = None,
     ) -> Tuple[List[Requirement], int]:
         # Build filter conditions for count
         filters = []
@@ -84,11 +84,11 @@ class RequirementService:
         if status:
             filters.append(Requirement.status == status)
         if city:
-            filters.append(Requirement.city == city)
+            filters.append(Requirement.city.in_(city))
         if district:
             filters.append(Requirement.district == district)
         if order_type:
-            filters.append(Requirement.order_type == order_type)
+            filters.append(Requirement.order_type.in_(order_type))
 
         # Count independently
         count_query = select(func.count()).select_from(Requirement)
@@ -143,7 +143,7 @@ class RequirementService:
         req = db.get(Requirement, requirement_id)
         if not req:
             return False
-        req.status = "closed"
+        db.delete(req)
         db.commit()
         return True
 

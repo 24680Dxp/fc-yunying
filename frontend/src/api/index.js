@@ -1,15 +1,18 @@
 import axios from 'axios';
 import { getToken } from './auth';
+import qs from 'qs';
 
 const api = axios.create({
   baseURL: '/api/v1',
   timeout: 10000,
+  paramsSerializer: (params) => qs.stringify(params, { indices: false, arrayFormat: 'repeat' }),
 });
 
 // 带 token 的请求实例
 const authApi = axios.create({
   baseURL: '/api/v1',
   timeout: 10000,
+  paramsSerializer: (params) => qs.stringify(params, { indices: false, arrayFormat: 'repeat' }),
 });
 
 authApi.interceptors.request.use((config) => {
@@ -51,15 +54,15 @@ export function getRequirement(id) {
 }
 
 export function createRequirement(data) {
-  return api.post('/requirements/', data);
+  return authApi.post('/requirements/', data);
 }
 
 export function updateRequirement(id, data) {
-  return api.put(`/requirements/${id}`, data);
+  return authApi.put(`/requirements/${id}`, data);
 }
 
 export function deleteRequirement(id) {
-  return api.delete(`/requirements/${id}`);
+  return authApi.delete(`/requirements/${id}`);
 }
 
 // ===== 工单管理（增删改上传需 admin） =====

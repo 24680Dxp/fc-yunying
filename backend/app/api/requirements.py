@@ -1,6 +1,6 @@
 import csv
 from io import StringIO
-from typing import Optional
+from typing import List, Optional
 
 from fastapi import APIRouter, Depends, HTTPException, Query
 from fastapi.responses import StreamingResponse
@@ -14,6 +14,11 @@ from app.schemas.requirement import (
     RequirementUpdate,
 )
 from app.services.requirement_service import RequirementService, attach_req_status
+from app.auth import require_admin
+from app.models.user import User
+import logging
+
+logger = logging.getLogger(__name__)
 
 router = APIRouter(prefix="/api/v1/requirements", tags=["需求管理"])
 
@@ -35,10 +40,11 @@ EXPORT_HEADERS = [
 @router.get("/export")
 def export_requirements(
     search: Optional[str] = Query(None),
-    city: Optional[str] = Query(None, description="市"),
+    city: Optional[List[str]] = Query(None, description="市（多选）"),
     district: Optional[str] = Query(None, description="区/县"),
-    order_type: Optional[str] = Query(None, description="工单类型"),
+    order_type: Optional[List[str]] = Query(None, description="工单类型（多选）"),
     db: Session = Depends(get_db),
+    _: User = Depends(require_admin),
 ):
     """导出需求列表为 CSV（支持当前筛选条件）"""
     items, _ = RequirementService.list_requirements(
@@ -85,11 +91,12 @@ def list_requirements(
     priority: Optional[str] = Query(None),
     status: Optional[str] = Query(None),
     search: Optional[str] = Query(None),
-    city: Optional[str] = Query(None, description="市"),
+    city: Optional[List[str]] = Query(None, description="市（多选）"),
     district: Optional[str] = Query(None, description="区/县"),
-    order_type: Optional[str] = Query(None, description="工单类型"),
+    order_type: Optional[List[str]] = Query(None, description="工单类型（多选）"),
     db: Session = Depends(get_db),
 ):
+    logger.info(f"list_requirements: city={city!r}, order_type={order_type!r}")
     items, total = RequirementService.list_requirements(
         db,
         skip=skip,
@@ -101,6 +108,7 @@ def list_requirements(
         district=district,
         order_type=order_type,
     )
+    logger.info(f"result: total={total}, items={len(items)}")
     return RequirementList(
         total=total,
         items=[_enrich(r, db) for r in items],
@@ -110,7 +118,11 @@ def list_requirements(
 
 
 @router.post("/", response_model=RequirementResponse, status_code=201)
-def create_requirement(data: RequirementCreate, db: Session = Depends(get_db)):
+def create_requirement(
+    data: RequirementCreate,
+    db: Session = Depends(get_db),
+    _: User = Depends(require_admin),
+):
     req = RequirementService.create_requirement(db, data)
     return _enrich(req, db)
 
@@ -125,7 +137,10 @@ def get_requirement(requirement_id: int, db: Session = Depends(get_db)):
 
 @router.put("/{requirement_id}", response_model=RequirementResponse)
 def update_requirement(
-    requirement_id: int, data: RequirementUpdate, db: Session = Depends(get_db)
+    requirement_id: int,
+    data: RequirementUpdate,
+    db: Session = Depends(get_db),
+    _: User = Depends(require_admin),
 ):
     req = RequirementService.update_requirement(db, requirement_id, data)
     if not req:
@@ -134,7 +149,11 @@ def update_requirement(
 
 
 @router.delete("/{requirement_id}", status_code=204)
-def delete_requirement(requirement_id: int, db: Session = Depends(get_db)):
+def delete_requirement(
+    requirement_id: int,
+    db: Session = Depends(get_db),
+    _: User = Depends(require_admin),
+):
     ok = RequirementService.delete_requirement(db, requirement_id)
     if not ok:
         raise HTTPException(status_code=404, detail="需求不存在")

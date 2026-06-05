@@ -135,6 +135,10 @@ export default function RequirementList() {
   };
 
   const openCreate = () => {
+    if (!isAdmin()) {
+      message.error('仅管理员可新增需求');
+      return;
+    }
     setEditing(null);
     form.resetFields();
     // 接收日期自动设为当前日期
@@ -147,6 +151,10 @@ export default function RequirementList() {
   };
 
   const openEdit = (record) => {
+    if (!isAdmin()) {
+      message.error('仅管理员可编辑需求');
+      return;
+    }
     setEditing(record);
     form.setFieldsValue(record);
     setSelectedCity(record.city || undefined);
@@ -173,7 +181,7 @@ export default function RequirementList() {
   const handleDelete = async (id) => {
     try {
       await deleteRequirement(id);
-      message.success('已关闭');
+      message.success('已删除');
       fetchData();
     } catch {
       message.error('操作失败');
@@ -213,31 +221,42 @@ export default function RequirementList() {
             style={{ width: 260 }}
           />
           <Select
+            mode="multiple"
             placeholder="市"
             allowClear
-            style={{ width: 110 }}
-            value={filters.city}
+            style={{ width: 200, minWidth: 140 }}
+            value={filters.city ? (Array.isArray(filters.city) ? filters.city : [filters.city]) : undefined}
             onChange={(v) => setFilters({ ...filters, city: v })}
             options={guangdongCities.map(c => ({ label: c, value: c }))}
+            maxTagCount={2}
           />
           <Select
+            mode="multiple"
             placeholder="工单类型"
             allowClear
-            style={{ width: 130 }}
-            value={filters.order_type}
+            style={{ width: 230, minWidth: 170 }}
+            value={filters.order_type ? (Array.isArray(filters.order_type) ? filters.order_type : [filters.order_type]) : undefined}
             onChange={(v) => setFilters({ ...filters, order_type: v })}
             options={orderTypeSelectOptions}
+            maxTagCount={2}
           />
         </Space>
         <Space>
           {isAdmin() && (
-            <Button icon={<DownloadOutlined />} onClick={handleExport}>
+            <Button type="primary" icon={<DownloadOutlined />} onClick={handleExport}>
               导出
             </Button>
           )}
-          <Button type="primary" icon={<PlusOutlined />} onClick={openCreate}>
-            新增需求
-          </Button>
+          {isAdmin() && (
+            <Button type="primary" icon={<PlusOutlined />} onClick={openCreate}>
+              新增需求
+            </Button>
+          )}
+          {!isAdmin() && (
+            <Button type="primary" icon={<PlusOutlined />} disabled>
+              新增需求
+            </Button>
+          )}
         </Space>
       </Space>
 
@@ -249,11 +268,17 @@ export default function RequirementList() {
             title: '操作', width: 120, fixed: 'right',
             render: (_, record) => (
               <Space>
-                <Button type="link" size="small" icon={<EditOutlined />}
-                  onClick={() => openEdit(record)}>编辑</Button>
-                <Popconfirm title="确认关闭此需求？" onConfirm={() => handleDelete(record.id)}>
-                  <Button type="link" size="small" danger icon={<DeleteOutlined />}>关闭</Button>
-                </Popconfirm>
+                {isAdmin() ? (
+                  <>
+                    <Button type="link" size="small" icon={<EditOutlined />}
+                      onClick={() => openEdit(record)}>编辑</Button>
+                    <Popconfirm title="确认删除此需求？" onConfirm={() => handleDelete(record.id)}>
+                      <Button type="link" size="small" danger icon={<DeleteOutlined />}>删除</Button>
+                    </Popconfirm>
+                  </>
+                ) : (
+                  <span style={{ color: '#999' }}>--</span>
+                )}
               </Space>
             ),
           },
