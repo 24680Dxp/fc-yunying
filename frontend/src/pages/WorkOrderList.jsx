@@ -34,7 +34,10 @@ const baseColumns = [
     title: '工单状态', dataIndex: 'status', width: 90, resizable: true,
     render: (v) => <Tag color={statusColors[v]}>{statusLabels[v] || v}</Tag>,
   },
-  { title: '工单主题', dataIndex: 'title', ellipsis: true, minWidth: 160, resizable: true },
+  {
+    title: '工单主题', dataIndex: 'title', ellipsis: true, minWidth: 160, resizable: true,
+    render: (v) => v ? `***${v.slice(15)}` : '',
+  },
   { title: '派单时间', dataIndex: 'dispatch_time', width: 140, resizable: true },
   { title: '业务受理地市', dataIndex: 'business_city', width: 110, resizable: true },
   { title: '产品分类', dataIndex: 'product_category', width: 130, resizable: true },
