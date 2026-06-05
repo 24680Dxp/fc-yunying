@@ -125,7 +125,7 @@ class RequirementService:
 
     @staticmethod
     def create_requirement(db: Session, data: RequirementCreate) -> Requirement:
-        req = Requirement(**data.model_dump())
+        req = Requirement(**data.dict())
         db.add(req)
         db.commit()
         db.refresh(req)
@@ -138,7 +138,7 @@ class RequirementService:
         req = db.get(Requirement, requirement_id)
         if not req:
             return None
-        update_data = data.model_dump(exclude_unset=True)
+        update_data = data.dict(exclude_unset=True)
         for field, value in update_data.items():
             setattr(req, field, value)
         db.commit()

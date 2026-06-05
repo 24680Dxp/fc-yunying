@@ -84,7 +84,7 @@ class WorkOrderService:
 
     @staticmethod
     def create_work_order(db: Session, data: WorkOrderCreate) -> WorkOrder:
-        wo = WorkOrder(**data.model_dump())
+        wo = WorkOrder(**data.dict())
         db.add(wo)
         db.commit()
         db.refresh(wo)
@@ -97,7 +97,7 @@ class WorkOrderService:
         wo = db.get(WorkOrder, work_order_id)
         if not wo:
             return None
-        update_data = data.model_dump(exclude_unset=True)
+        update_data = data.dict(exclude_unset=True)
         for field, value in update_data.items():
             setattr(wo, field, value)
         db.commit()
