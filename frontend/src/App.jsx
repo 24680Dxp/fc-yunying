@@ -11,11 +11,17 @@ import {
   EditOutlined,
   CloseCircleOutlined,
   BarChartOutlined,
+  BuildOutlined,
+  ProjectOutlined,
+  SyncOutlined,
 } from '@ant-design/icons';
 import { getUser, clearAuth, isAdmin } from './api/auth';
 import RequirementList from './pages/RequirementList';
 import WorkOrderList from './pages/WorkOrderList';
 import StatisticsPage from './pages/StatisticsPage';
+import ProjectStatisticsPage from './pages/ProjectStatisticsPage';
+import FullcycleStatisticsPage from './pages/FullcycleStatisticsPage';
+import HistoricalWorkOrderList from './pages/HistoricalWorkOrderList';
 import LoginPage from './pages/LoginPage';
 
 const { Header, Sider, Content } = Layout;
@@ -27,14 +33,31 @@ const menuItems = [
     label: '需求管理',
   },
   {
-    key: '/statistics',
+    key: 'statistics-group',
     icon: <BarChartOutlined />,
     label: '统计分析',
+    children: [
+      {
+        key: '/statistics/fullcycle',
+        icon: <SyncOutlined />,
+        label: '全周期统计分析',
+      },
+      {
+        key: '/statistics/operations',
+        icon: <ProjectOutlined />,
+        label: '运营期统计分析',
+      },
+      {
+        key: '/statistics/construction',
+        icon: <BuildOutlined />,
+        label: '建设期统计分析',
+      },
+    ],
   },
   {
     key: 'work-orders-group',
     icon: <OrderedListOutlined />,
-    label: '工单管理',
+    label: '运营期工单管理',
     children: [
       {
         key: '/work-orders/open',
@@ -53,10 +76,15 @@ const menuItems = [
       },
     ],
   },
+  {
+    key: '/historical-work-orders',
+    icon: <OrderedListOutlined />,
+    label: '历史工单信息',
+  },
 ];
 
 // 扁平化获取所有子菜单key
-const allMenuKeys = ['/requirements', '/statistics', '/work-orders/open', '/work-orders/adjust', '/work-orders/cancel'];
+const allMenuKeys = ['/requirements', '/historical-work-orders', '/statistics/fullcycle', '/statistics/operations', '/statistics/construction', '/work-orders/open', '/work-orders/adjust', '/work-orders/cancel'];
 
 // 路由守卫
 function ProtectedRoute({ children }) {
@@ -69,7 +97,10 @@ function ProtectedRoute({ children }) {
 
 const pageTitles = {
   '/requirements': '需求管理',
-  '/statistics': '统计分析',
+  '/historical-work-orders': '历史工单信息',
+  '/statistics/fullcycle': '全周期统计分析',
+  '/statistics/operations': '运营期统计分析',
+  '/statistics/construction': '建设期统计分析',
   '/work-orders/open': '开通工单管理',
   '/work-orders/adjust': '调整工单管理',
   '/work-orders/cancel': '取消工单管理',
@@ -106,8 +137,10 @@ function AppLayout() {
   const selectedKey = allMenuKeys.includes(location.pathname)
     ? location.pathname
     : '/work-orders/open';
-  // 自动展开工单管理父菜单
-  const openKeys = location.pathname.startsWith('/work-orders') ? ['work-orders-group'] : [];
+  // 自动展开工单管理和统计分析父菜单
+  const openKeys = [];
+  if (location.pathname.startsWith('/work-orders')) openKeys.push('work-orders-group');
+  if (location.pathname.startsWith('/statistics')) openKeys.push('statistics-group');
 
   return (
     <Layout style={{ minHeight: '100vh' }}>
@@ -128,7 +161,7 @@ function AppLayout() {
           theme="dark"
           mode="inline"
           selectedKeys={[selectedKey]}
-          defaultOpenKeys={['work-orders-group']}
+          defaultOpenKeys={['work-orders-group', 'statistics-group']}
           items={menuItems}
           onClick={({ key }) => navigate(key)}
         />
@@ -155,7 +188,12 @@ function AppLayout() {
           <Routes>
             <Route path="/" element={<Navigate to="/requirements" replace />} />
             <Route path="/requirements" element={<RequirementList />} />
-            <Route path="/statistics" element={<StatisticsPage />} />
+            <Route path="/historical-work-orders" element={<HistoricalWorkOrderList isAdmin={isAdmin()} />} />
+            <Route path="/statistics/operations" element={<StatisticsPage />} />
+            <Route path="/statistics/construction" element={<ProjectStatisticsPage />} />
+            <Route path="/statistics/fullcycle" element={<FullcycleStatisticsPage />} />
+            {/* 旧路由兼容重定向 */}
+            <Route path="/statistics" element={<Navigate to="/statistics/operations" replace />} />
             <Route path="/work-orders/open" element={<WorkOrderList isAdmin={isAdmin()} operationType="业务开通" pageTitle="开通工单管理" />} />
             <Route path="/work-orders/adjust" element={<WorkOrderList isAdmin={isAdmin()} operationType="业务调整" pageTitle="调整工单管理" />} />
             <Route path="/work-orders/cancel" element={<WorkOrderList isAdmin={isAdmin()} operationType="业务取消" pageTitle="取消工单管理" />} />

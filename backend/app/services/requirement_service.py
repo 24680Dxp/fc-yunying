@@ -125,7 +125,7 @@ class RequirementService:
 
     @staticmethod
     def create_requirement(db: Session, data: RequirementCreate) -> Requirement:
-        req = Requirement(**data.dict())
+        req = Requirement(**data.model_dump())
         db.add(req)
         db.commit()
         db.refresh(req)
@@ -138,7 +138,7 @@ class RequirementService:
         req = db.get(Requirement, requirement_id)
         if not req:
             return None
-        update_data = data.dict(exclude_unset=True)
+        update_data = data.model_dump(exclude_unset=True)
         for field, value in update_data.items():
             setattr(req, field, value)
         db.commit()
@@ -153,6 +153,66 @@ class RequirementService:
         db.delete(req)
         db.commit()
         return True
+
+    @staticmethod
+    def batch_import(db: Session, items: List[dict]) -> dict:
+        """批量导入需求。校验 网点号+工单类型+安装地址 唯一，返回导入统计。"""
+        imported = 0
+        skipped = 0
+        skipped_details = []
+        seen = set()  # 批次内去重
+
+        for item in items:
+            outlet_code = (item.get("outlet_code") or "").strip()
+            order_type = (item.get("order_type") or "").strip()
+            install_address = (item.get("install_address") or "").strip()
+
+            key = (outlet_code, order_type, install_address)
+            if key in seen:
+                skipped += 1
+                skipped_details.append(
+                    f"网点号[{outlet_code}] 工单类型[{order_type}] 批次内重复"
+                )
+                continue
+            seen.add(key)
+
+            # 唯一性校验：查数据库
+            existing = db.execute(
+                select(Requirement).where(
+                    Requirement.outlet_code == outlet_code,
+                    Requirement.order_type == order_type,
+                    Requirement.install_address == install_address,
+                )
+            ).scalars().first()
+
+            if existing:
+                skipped += 1
+                skipped_details.append(
+                    f"网点号[{outlet_code}] 工单类型[{order_type}] 安装地址[{install_address[:20]}...]"
+                )
+                continue
+
+            req = Requirement(
+                receive_date=item.get("receive_date"),
+                owner_name=item.get("owner_name"),
+                contact=item.get("contact"),
+                city=item.get("city"),
+                district=item.get("district"),
+                outlet_code=outlet_code,
+                order_type=order_type,
+                install_address=install_address,
+                remark=item.get("remark"),
+            )
+            db.add(req)
+            imported += 1
+
+        db.commit()
+        return {
+            "imported": imported,
+            "skipped": skipped,
+            "skipped_count": skipped,
+            "skipped_details": skipped_details,
+        }
 
 
 def attach_req_status(req: Requirement, db: Session) -> str:

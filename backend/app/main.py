@@ -1,7 +1,7 @@
 from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
 
-from app.api import auth, requirements, work_orders, statistics
+from app.api import auth, requirements, work_orders, statistics, historical_work_orders
 from app.database import Base, engine
 from app.models.user import User
 from app.auth import hash_password
@@ -48,6 +48,7 @@ app.include_router(auth.router)
 app.include_router(requirements.router)
 app.include_router(work_orders.router)
 app.include_router(statistics.router)
+app.include_router(historical_work_orders.router)
 
 
 @app.get("/")

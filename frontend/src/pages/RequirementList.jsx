@@ -2,9 +2,9 @@ import React, { useState, useEffect, useCallback } from 'react';
 import {
   Table, Button, Modal, Form, Input, Select, Space, Tag, Tooltip, message, Popconfirm,
 } from 'antd';
-import { PlusOutlined, EditOutlined, DeleteOutlined, SearchOutlined, DownloadOutlined } from '@ant-design/icons';
+import { PlusOutlined, EditOutlined, DeleteOutlined, SearchOutlined, DownloadOutlined, UploadOutlined } from '@ant-design/icons';
 import {
-  getRequirements, createRequirement, updateRequirement, deleteRequirement, exportRequirements,
+  getRequirements, createRequirement, updateRequirement, deleteRequirement, exportRequirements, uploadRequirements,
 } from '../api';
 import { isAdmin } from '../api/auth';
 import { guangdongCities, cityDistricts } from '../data/guangdong';
@@ -267,6 +267,20 @@ export default function RequirementList() {
     }
   };
 
+  const handleUpload = async (e) => {
+    const file = e.target.files[0];
+    if (!file) return;
+    try {
+      const res = await uploadRequirements(file);
+      message.success(res.data.message);
+      fetchData();
+    } catch (err) {
+      const detail = err.response?.data?.detail || '导入失败';
+      message.error(detail);
+    }
+    e.target.value = '';
+  };
+
   const orderTypeSelectOptions = orderTypeOptions.map(v => ({ label: v, value: v }));
 
   return (
@@ -307,6 +321,20 @@ export default function RequirementList() {
             <Button type="primary" icon={<DownloadOutlined />} onClick={handleExport}>
               导出
             </Button>
+          )}
+          {isAdmin() && (
+            <>
+              <Button type="primary" icon={<UploadOutlined />} onClick={() => document.getElementById('req-excel-upload').click()}>
+                导入清单
+              </Button>
+              <input
+                id="req-excel-upload"
+                type="file"
+                accept=".xlsx,.xls,.csv"
+                style={{ display: 'none' }}
+                onChange={handleUpload}
+              />
+            </>
           )}
           {isAdmin() && (
             <Button type="primary" icon={<PlusOutlined />} onClick={openCreate}>
