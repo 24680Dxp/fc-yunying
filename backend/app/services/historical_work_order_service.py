@@ -53,10 +53,16 @@ class HistoricalWorkOrderService:
         limit: int = 20,
         search: Optional[str] = None,
         city: Optional[str] = None,
+        internet_status: Optional[str] = None,
+        ql_status: Optional[str] = None,
     ) -> Tuple[List[HistoricalWorkOrder], int]:
         filters = []
         if city:
             filters.append(HistoricalWorkOrder.city == city)
+        if internet_status:
+            filters.append(HistoricalWorkOrder.internet_work_order_status == internet_status)
+        if ql_status:
+            filters.append(HistoricalWorkOrder.ql_work_order_status == ql_status)
         if search:
             filters.append(
                 HistoricalWorkOrder.site_code.ilike(f"%{search}%")

@@ -47,10 +47,13 @@ def list_work_orders(
     limit: int = Query(20, ge=1, le=100),
     search: Optional[str] = Query(None),
     city: Optional[str] = Query(None),
+    internet_status: Optional[str] = Query(None),
+    ql_status: Optional[str] = Query(None),
     db: Session = Depends(get_db),
 ):
     items, total = HistoricalWorkOrderService.list_work_orders(
         db, skip=skip, limit=limit, search=search, city=city,
+        internet_status=internet_status, ql_status=ql_status,
     )
     return HistoricalWorkOrderList(
         total=total,
@@ -63,11 +66,14 @@ def list_work_orders(
 def export_work_orders(
     search: Optional[str] = Query(None),
     city: Optional[str] = Query(None),
+    internet_status: Optional[str] = Query(None),
+    ql_status: Optional[str] = Query(None),
     db: Session = Depends(get_db),
     _: User = Depends(require_admin),
 ):
     items, _ = HistoricalWorkOrderService.list_work_orders(
         db, skip=0, limit=100000, search=search, city=city,
+        internet_status=internet_status, ql_status=ql_status,
     )
     output = StringIO()
     writer = csv.writer(output)

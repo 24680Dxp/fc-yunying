@@ -51,6 +51,8 @@ export default function HistoricalWorkOrderList({ isAdmin }) {
   const [pageSize] = useState(20);
   const [search, setSearch] = useState('');
   const [cityFilter, setCityFilter] = useState(undefined);
+  const [internetStatus, setInternetStatus] = useState(undefined);
+  const [qlStatus, setQlStatus] = useState(undefined);
   const [cities, setCities] = useState([]);
   const [modalOpen, setModalOpen] = useState(false);
   const [editing, setEditing] = useState(null);
@@ -79,14 +81,16 @@ export default function HistoricalWorkOrderList({ isAdmin }) {
       const res = await getHistoricalWorkOrders({
         skip: (page - 1) * pageSize, limit: pageSize,
         search: search || undefined, city: cityFilter || undefined,
+        internet_status: internetStatus || undefined,
+        ql_status: qlStatus || undefined,
       });
       setData(res.data.items);
       setTotal(res.data.total);
     } catch { message.error('加载失败'); }
     setLoading(false);
-  }, [page, search, pageSize, cityFilter]);
+  }, [page, search, pageSize, cityFilter, internetStatus, qlStatus]);
 
-  useEffect(() => { setPage(1); }, [search, cityFilter]);
+  useEffect(() => { setPage(1); }, [search, cityFilter, internetStatus, qlStatus]);
   useEffect(() => { fetchData(); }, [fetchData]);
 
   const components = {
@@ -108,7 +112,7 @@ export default function HistoricalWorkOrderList({ isAdmin }) {
 
   const handleExport = async () => {
     try {
-      const res = await exportHistoricalWorkOrders({ search: search || undefined, city: cityFilter || undefined });
+      const res = await exportHistoricalWorkOrders({ search: search || undefined, city: cityFilter || undefined, internet_status: internetStatus || undefined, ql_status: qlStatus || undefined });
       const url = URL.createObjectURL(new Blob([res.data], { type: 'text/csv;charset=utf-8;' }));
       const link = document.createElement('a');
       link.href = url;
@@ -182,6 +186,14 @@ export default function HistoricalWorkOrderList({ isAdmin }) {
           <Select placeholder="地市" allowClear style={{ width: 120 }}
             value={cityFilter} onChange={v => setCityFilter(v)}
             options={(cities.length > 0 ? cities : guangdongCities).map(c => ({ label: c, value: c }))}
+          />
+          <Select placeholder="互联网工单状态" allowClear style={{ width: 150 }}
+            value={internetStatus} onChange={v => setInternetStatus(v)}
+            options={['开通中', '已归档'].map(s => ({ label: s, value: s }))}
+          />
+          <Select placeholder="千里眼工单状态" allowClear style={{ width: 150 }}
+            value={qlStatus} onChange={v => setQlStatus(v)}
+            options={['开通中', '已归档'].map(s => ({ label: s, value: s }))}
           />
         </Space>
         <Space>
