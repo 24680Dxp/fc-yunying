@@ -184,7 +184,7 @@ function AppLayout() {
             </Button>
           </Dropdown>
         </Header>
-        <Content style={{ margin: 24, background: '#fff', padding: 24, borderRadius: 8 }}>
+        <Content style={{ margin: '0 24px 24px', background: '#fff', padding: '16px 24px', borderRadius: 8 }}>
           <Routes>
             <Route path="/" element={<Navigate to="/requirements" replace />} />
             <Route path="/requirements" element={<RequirementList />} />

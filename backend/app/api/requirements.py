@@ -148,6 +148,8 @@ def export_requirements(
     city: Optional[List[str]] = Query(None, description="市（多选）"),
     district: Optional[str] = Query(None, description="区/县"),
     order_type: Optional[List[str]] = Query(None, description="工单类型（多选）"),
+    date_from: Optional[str] = Query(None, description="接收日期起"),
+    date_to: Optional[str] = Query(None, description="接收日期止"),
     db: Session = Depends(get_db),
     _: User = Depends(require_admin),
 ):
@@ -160,6 +162,8 @@ def export_requirements(
         city=city,
         district=district,
         order_type=order_type,
+        date_from=date_from,
+        date_to=date_to,
     )
 
     output = StringIO()
@@ -199,6 +203,8 @@ def list_requirements(
     city: Optional[List[str]] = Query(None, description="市（多选）"),
     district: Optional[str] = Query(None, description="区/县"),
     order_type: Optional[List[str]] = Query(None, description="工单类型（多选）"),
+    date_from: Optional[str] = Query(None, description="接收日期起"),
+    date_to: Optional[str] = Query(None, description="接收日期止"),
     db: Session = Depends(get_db),
 ):
     logger.info(f"list_requirements: city={city!r}, order_type={order_type!r}")
@@ -212,6 +218,8 @@ def list_requirements(
         city=city,
         district=district,
         order_type=order_type,
+        date_from=date_from,
+        date_to=date_to,
     )
     logger.info(f"result: total={total}, items={len(items)}")
     return RequirementList(

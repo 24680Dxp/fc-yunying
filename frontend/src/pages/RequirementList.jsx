@@ -1,17 +1,19 @@
 import React, { useState, useEffect, useCallback } from 'react';
 import {
-  Table, Button, Modal, Form, Input, Select, Space, Tag, Tooltip, message, Popconfirm,
+  Table, Button, Modal, Form, Input, Select, Space, Tag, Tooltip, message, Popconfirm, DatePicker, Row, Col,
 } from 'antd';
-import { PlusOutlined, EditOutlined, DeleteOutlined, SearchOutlined, DownloadOutlined, UploadOutlined } from '@ant-design/icons';
+import { PlusOutlined, EditOutlined, DeleteOutlined, SearchOutlined, DownloadOutlined, UploadOutlined, ReloadOutlined } from '@ant-design/icons';
 import {
   getRequirements, createRequirement, updateRequirement, deleteRequirement, exportRequirements, uploadRequirements,
 } from '../api';
 import { isAdmin } from '../api/auth';
 import { guangdongCities, cityDistricts } from '../data/guangdong';
 import ResizableTitle from '../components/ResizableTitle';
+import dayjs from 'dayjs';
 import 'react-resizable/css/styles.css';
 
 const { TextArea } = Input;
+const { RangePicker } = DatePicker;
 
 const statusLabels = {
   pending_review: '待评审', approved: '已通过', in_development: '开发中',
@@ -105,6 +107,7 @@ export default function RequirementList() {
   const [editing, setEditing] = useState(null);
   const [search, setSearch] = useState('');
   const [filters, setFilters] = useState({});
+  const [dateRange, setDateRange] = useState(null);
   const [selectedCity, setSelectedCity] = useState(undefined);
   const [form] = Form.useForm();
 
@@ -179,6 +182,13 @@ export default function RequirementList() {
         search: search || undefined,
         ...filters,
       };
+      // 日期范围：格式化为 YYYY-MM-DD 字符串
+      if (dateRange && dateRange[0]) {
+        params.date_from = dateRange[0].format('YYYY-MM-DD');
+      }
+      if (dateRange && dateRange[1]) {
+        params.date_to = dateRange[1].format('YYYY-MM-DD');
+      }
       const res = await getRequirements(params);
       setData(res.data.items);
       setTotal(res.data.total);
@@ -188,7 +198,7 @@ export default function RequirementList() {
     setLoading(false);
   };
 
-  useEffect(() => { fetchData(); }, [page, filters]);
+  useEffect(() => { fetchData(); }, [page, filters, dateRange]);
 
   const handleSearch = () => {
     setPage(1);
@@ -251,7 +261,10 @@ export default function RequirementList() {
 
   const handleExport = async () => {
     try {
-      const res = await exportRequirements(filters);
+      const params = { search: search || undefined, ...filters };
+      if (dateRange && dateRange[0]) params.date_from = dateRange[0].format('YYYY-MM-DD');
+      if (dateRange && dateRange[1]) params.date_to = dateRange[1].format('YYYY-MM-DD');
+      const res = await exportRequirements(params);
       // 触发浏览器下载
       const url = URL.createObjectURL(new Blob([res.data], { type: 'text/csv;charset=utf-8;' }));
       const link = document.createElement('a');
@@ -283,71 +296,132 @@ export default function RequirementList() {
 
   const orderTypeSelectOptions = orderTypeOptions.map(v => ({ label: v, value: v }));
 
+  // 重置所有筛选条件
+  const handleReset = () => {
+    setSearch('');
+    setFilters({});
+    setDateRange(null);
+    setPage(1);
+  };
+
   return (
     <div>
-      <Space style={{ marginBottom: 16, width: '100%', justifyContent: 'space-between' }}>
-        <Space wrap>
-          <Input
-            placeholder="搜索网点编号/业主姓名/联系方式"
-            prefix={<SearchOutlined />}
-            value={search}
-            onChange={(e) => setSearch(e.target.value)}
-            onPressEnter={handleSearch}
-            style={{ width: 260 }}
-          />
-          <Select
-            mode="multiple"
-            placeholder="市"
-            allowClear
-            style={{ width: 200, minWidth: 140 }}
-            value={filters.city ? (Array.isArray(filters.city) ? filters.city : [filters.city]) : undefined}
-            onChange={(v) => setFilters({ ...filters, city: v })}
-            options={guangdongCities.map(c => ({ label: c, value: c }))}
-            maxTagCount={2}
-          />
-          <Select
-            mode="multiple"
-            placeholder="工单类型"
-            allowClear
-            style={{ width: 230, minWidth: 170 }}
-            value={filters.order_type ? (Array.isArray(filters.order_type) ? filters.order_type : [filters.order_type]) : undefined}
-            onChange={(v) => setFilters({ ...filters, order_type: v })}
-            options={orderTypeSelectOptions}
-            maxTagCount={2}
-          />
-        </Space>
-        <Space>
-          {isAdmin() && (
-            <Button type="primary" icon={<DownloadOutlined />} onClick={handleExport}>
-              导出
-            </Button>
-          )}
-          {isAdmin() && (
-            <>
-              <Button type="primary" icon={<UploadOutlined />} onClick={() => document.getElementById('req-excel-upload').click()}>
-                导入清单
-              </Button>
-              <input
-                id="req-excel-upload"
-                type="file"
-                accept=".xlsx,.xls,.csv"
-                style={{ display: 'none' }}
-                onChange={handleUpload}
-              />
-            </>
-          )}
-          {isAdmin() && (
-            <Button type="primary" icon={<PlusOutlined />} onClick={openCreate}>
-              新增需求
-            </Button>
-          )}
-          {!isAdmin() && (
-            <Button type="primary" icon={<PlusOutlined />} disabled>
-              新增需求
-            </Button>
-          )}
-        </Space>
-      </Space>
+      {/* 筛选栏 */}
+      <div style={{
+        background: '#fff',
+        border: '1px solid #f0f0f0',
+        borderRadius: 8,
+        padding: '12px 0',
+        marginBottom: 16,
+        boxShadow: '0 1px 2px rgba(0,0,0,0.03)',
+      }}>
+        {/* 第一行：搜索 + 操作 */}
+        <Row gutter={[12, 8]} align="middle">
+          <Col flex="834px">
+            <div style={{ display: 'flex', gap: 12, alignItems: 'center' }}>
+              <div style={{
+                border: '1px solid #d9d9d9', borderRadius: 6, display: 'flex', alignItems: 'center',
+                background: '#fff', overflow: 'hidden', flex: 1,
+              }}>
+                <span style={{
+                  padding: '5px 12px', fontSize: 14, color: '#434343', whiteSpace: 'nowrap',
+                  borderRight: '1px solid #f0f0f0', userSelect: 'none',
+                }}>搜索</span>
+                <Input
+                  placeholder="网点编号 / 业主姓名 / 联系方式"
+                  prefix={<SearchOutlined style={{ color: '#bfbfbf' }} />}
+                  value={search}
+                  onChange={(e) => setSearch(e.target.value)}
+                  onPressEnter={handleSearch}
+                  allowClear
+                  variant="borderless"
+                  style={{ flex: 1 }}
+                />
+              </div>
+              <Button icon={<ReloadOutlined />} onClick={handleReset} style={{ fontSize: 14 }}>重置</Button>
+            </div>
+          </Col>
+          <Col flex="1" />
+          <Col>
+            <Space size={8}>
+              {isAdmin() && (
+                <Button type="primary" icon={<DownloadOutlined />} onClick={handleExport}>导出</Button>
+              )}
+              {isAdmin() && (
+                <>
+                  <Button type="primary" icon={<UploadOutlined />}
+                    onClick={() => document.getElementById('req-excel-upload').click()}>导入清单</Button>
+                  <input id="req-excel-upload" type="file" accept=".xlsx,.xls,.csv"
+                    style={{ display: 'none' }} onChange={handleUpload} />
+                </>
+              )}
+              {isAdmin() ? (
+                <Button type="primary" icon={<PlusOutlined />} onClick={openCreate}>新增需求</Button>
+              ) : (
+                <Button type="primary" icon={<PlusOutlined />} disabled>新增需求</Button>
+              )}
+            </Space>
+          </Col>
+        </Row>
+
+        {/* 第二行：筛选条件 */}
+        <Row gutter={[12, 0]} align="middle" style={{ marginTop: 10 }}>
+          <Col flex="834px">
+            <div style={{ display: 'flex', gap: 12 }}>
+              <div style={{
+                border: '1px solid #d9d9d9', borderRadius: 6, display: 'flex', alignItems: 'center',
+                background: '#fff', overflow: 'hidden', width: 320,
+              }}>
+                <span style={{
+                  padding: '5px 12px', fontSize: 14, color: '#434343', whiteSpace: 'nowrap',
+                  borderRight: '1px solid #f0f0f0', userSelect: 'none',
+                }}>接收日期</span>
+                <RangePicker
+                  placeholder={['开始日期', '结束日期']}
+                  format="YYYY-MM-DD"
+                  value={dateRange}
+                  onChange={(dates) => { setDateRange(dates); setPage(1); }}
+                  variant="borderless"
+                  style={{ flex: 1 }}
+                />
+              </div>
+              <div style={{
+                border: '1px solid #d9d9d9', borderRadius: 6, display: 'flex', alignItems: 'center',
+                background: '#fff', overflow: 'hidden', width: 220,
+              }}>
+                <span style={{
+                  padding: '5px 12px', fontSize: 14, color: '#434343', whiteSpace: 'nowrap',
+                  borderRight: '1px solid #f0f0f0', userSelect: 'none',
+                }}>市</span>
+                <Select
+                  mode="multiple" placeholder="全部" allowClear variant="borderless"
+                  style={{ flex: 1, minWidth: 0 }} maxTagCount={1}
+                  value={filters.city ? (Array.isArray(filters.city) ? filters.city : [filters.city]) : undefined}
+                  onChange={(v) => setFilters({ ...filters, city: v })}
+                  options={guangdongCities.map(c => ({ label: c, value: c }))}
+                />
+              </div>
+              <div style={{
+                border: '1px solid #d9d9d9', borderRadius: 6, display: 'flex', alignItems: 'center',
+                background: '#fff', overflow: 'hidden', width: 260,
+              }}>
+                <span style={{
+                  padding: '5px 12px', fontSize: 14, color: '#434343', whiteSpace: 'nowrap',
+                  borderRight: '1px solid #f0f0f0', userSelect: 'none',
+                }}>工单类型</span>
+                <Select
+                  mode="multiple" placeholder="全部" allowClear variant="borderless"
+                  style={{ flex: 1, minWidth: 0 }} maxTagCount={1}
+                  value={filters.order_type ? (Array.isArray(filters.order_type) ? filters.order_type : [filters.order_type]) : undefined}
+                  onChange={(v) => setFilters({ ...filters, order_type: v })}
+                  options={orderTypeSelectOptions}
+                />
+              </div>
+            </div>
+          </Col>
+          <Col flex="1" />
+        </Row>
+      </div>
 
       <Table
         rowKey="id"

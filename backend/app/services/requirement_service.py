@@ -76,6 +76,8 @@ class RequirementService:
         city: Optional[List[str]] = None,
         district: Optional[str] = None,
         order_type: Optional[List[str]] = None,
+        date_from: Optional[str] = None,
+        date_to: Optional[str] = None,
     ) -> Tuple[List[Requirement], int]:
         # Build filter conditions for count
         filters = []
@@ -89,6 +91,10 @@ class RequirementService:
             filters.append(Requirement.district == district)
         if order_type:
             filters.append(Requirement.order_type.in_(order_type))
+        if date_from:
+            filters.append(Requirement.receive_date >= date_from)
+        if date_to:
+            filters.append(Requirement.receive_date <= date_to)
 
         # Count independently
         count_query = select(func.count()).select_from(Requirement)
