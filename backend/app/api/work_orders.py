@@ -1,6 +1,9 @@
+import csv
+from io import StringIO
 from typing import List, Optional
 
 from fastapi import APIRouter, Depends, HTTPException, Query, UploadFile, File
+from fastapi.responses import StreamingResponse
 from sqlalchemy.orm import Session
 
 from app.database import get_db
@@ -69,6 +72,85 @@ def get_business_location_cities(
     db: Session = Depends(get_db),
 ):
     return WorkOrderService.get_business_location_cities(db)
+
+
+EXPORT_HEADERS = [
+    ("site_code", "站点编号"),
+    ("crm_order_id", "CRM订单号"),
+    ("order_no", "工单号"),
+    ("status", "工单状态"),
+    ("title", "工单主题"),
+    ("dispatch_time", "派单时间"),
+    ("business_city", "业务受理地市"),
+    ("product_category", "产品分类"),
+    ("operation_type", "操作类型"),
+    ("group_product_number", "集团产品号码"),
+    ("business_location_city", "业务所属地市"),
+    ("customer_address", "客户机房详细地址"),
+    ("current_step", "当前环节名称"),
+    ("camera_install_location", "摄像头安装位置"),
+    ("product_instance_id", "产品实例编号"),
+]
+
+
+@router.get("/export")
+def export_work_orders(
+    status: Optional[str] = Query(None),
+    search: Optional[str] = Query(None),
+    business_city: Optional[str] = Query(None),
+    product_category: Optional[str] = Query(None),
+    operation_type: Optional[str] = Query(None),
+    business_location_city: Optional[str] = Query(None),
+    product_category_group: Optional[str] = Query(None),
+    db: Session = Depends(get_db),
+    _: User = Depends(require_admin),
+):
+    """导出工单列表为 CSV（支持当前筛选条件），仅管理员"""
+    items, _ = WorkOrderService.list_work_orders(
+        db,
+        skip=0,
+        limit=100000,
+        status=status,
+        search=search,
+        business_city=business_city,
+        product_category=product_category,
+        operation_type=operation_type,
+        business_location_city=business_location_city,
+        product_category_group=product_category_group,
+    )
+
+    output = StringIO()
+    writer = csv.writer(output)
+    writer.writerow([h[1] for h in EXPORT_HEADERS])
+
+    for r in items:
+        # 计算站点编号
+        site_code = _compute_site_code(r)
+        row = []
+        for field, _ in EXPORT_HEADERS:
+            if field == "site_code":
+                row.append(site_code)
+            else:
+                row.append(getattr(r, field, "") or "")
+        writer.writerow(row)
+
+    output.seek(0)
+    op_name = {"业务开通": "open", "业务调整": "adjust", "业务取消": "cancel"}.get(operation_type or "", "all")
+    filename = f"work_orders_{op_name}.csv"
+    return StreamingResponse(
+        iter([output.getvalue()]),
+        media_type="text/csv; charset=utf-8-sig",
+        headers={"Content-Disposition": f"attachment; filename={filename}"},
+    )
+
+
+def _compute_site_code(orm_obj):
+    import re
+    m = re.search(r'\d{8}', orm_obj.customer_address or '')
+    if m:
+        return m.group()
+    m = re.search(r'\d{8}', orm_obj.camera_install_location or '')
+    return m.group() if m else ''
 
 
 @router.get("/{work_order_id}", response_model=WorkOrderResponse)

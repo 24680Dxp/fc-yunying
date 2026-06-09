@@ -2,9 +2,9 @@ import React, { useState, useEffect, useCallback } from 'react';
 import {
   Table, Button, Modal, Form, Input, Select, Space, Tag, message,
 } from 'antd';
-import { PlusOutlined, SearchOutlined, UploadOutlined } from '@ant-design/icons';
+import { PlusOutlined, SearchOutlined, UploadOutlined, DownloadOutlined } from '@ant-design/icons';
 import {
-  getWorkOrders, createWorkOrder, uploadWorkOrders,
+  getWorkOrders, createWorkOrder, uploadWorkOrders, exportWorkOrders,
 } from '../api';
 import ResizableTitle from '../components/ResizableTitle';
 import 'react-resizable/css/styles.css';
@@ -152,6 +152,29 @@ export default function WorkOrderList({ isAdmin, operationType, pageTitle }) {
     e.target.value = '';
   };
 
+  const handleExport = async () => {
+    try {
+      const params = {
+        search: search || undefined,
+        status: statusFilter || undefined,
+        operation_type: operationType,
+        business_location_city: cityFilter || undefined,
+        product_category_group: categoryFilter || undefined,
+      };
+      const res = await exportWorkOrders(params);
+      const blob = new Blob([res.data], { type: 'text/csv;charset=utf-8-sig' });
+      const url = window.URL.createObjectURL(blob);
+      const link = document.createElement('a');
+      link.href = url;
+      link.download = `work_orders_${operationType}.csv`;
+      link.click();
+      window.URL.revokeObjectURL(url);
+      message.success('导出成功');
+    } catch {
+      message.error('导出失败');
+    }
+  };
+
   const openCreate = () => {
     setEditing(null);
     form.resetFields();
@@ -218,6 +241,9 @@ export default function WorkOrderList({ isAdmin, operationType, pageTitle }) {
         <Space>
           {isAdmin && (
             <>
+              <Button icon={<DownloadOutlined />} onClick={handleExport}>
+                导出清单
+              </Button>
               <Button type="primary" icon={<UploadOutlined />} onClick={() => document.getElementById('excel-upload').click()}>
                 上传清单
               </Button>

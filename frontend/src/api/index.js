@@ -107,6 +107,13 @@ export function uploadWorkOrders(file) {
   });
 }
 
+export function exportWorkOrders(params = {}) {
+  return authApi.get('/work-orders/export', {
+    params,
+    responseType: 'blob',
+  });
+}
+
 // ===== 工单城市列表 =====
 
 export function getBusinessLocationCities() {

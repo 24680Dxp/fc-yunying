@@ -14,6 +14,9 @@ import {
   BuildOutlined,
   ProjectOutlined,
   SyncOutlined,
+  DashboardOutlined,
+  DatabaseOutlined,
+  MonitorOutlined,
 } from '@ant-design/icons';
 import { getUser, clearAuth, isAdmin } from './api/auth';
 import RequirementList from './pages/RequirementList';
@@ -22,6 +25,8 @@ import StatisticsPage from './pages/StatisticsPage';
 import ProjectStatisticsPage from './pages/ProjectStatisticsPage';
 import FullcycleStatisticsPage from './pages/FullcycleStatisticsPage';
 import HistoricalWorkOrderList from './pages/HistoricalWorkOrderList';
+import OnlineRateStatistics from './pages/OnlineRateStatistics';
+import ManagedList from './pages/ManagedList';
 import LoginPage from './pages/LoginPage';
 
 const { Header, Sider, Content } = Layout;
@@ -81,10 +86,27 @@ const menuItems = [
     icon: <OrderedListOutlined />,
     label: '历史工单信息',
   },
+  {
+    key: 'online-rate-group',
+    icon: <MonitorOutlined />,
+    label: '在线率管理',
+    children: [
+      {
+        key: '/online-rate/statistics',
+        icon: <DashboardOutlined />,
+        label: '在线率统计分析',
+      },
+      {
+        key: '/online-rate/managed-list',
+        icon: <DatabaseOutlined />,
+        label: '纳管清单信息',
+      },
+    ],
+  },
 ];
 
 // 扁平化获取所有子菜单key
-const allMenuKeys = ['/requirements', '/historical-work-orders', '/statistics/fullcycle', '/statistics/operations', '/statistics/construction', '/work-orders/open', '/work-orders/adjust', '/work-orders/cancel'];
+const allMenuKeys = ['/requirements', '/historical-work-orders', '/statistics/fullcycle', '/statistics/operations', '/statistics/construction', '/work-orders/open', '/work-orders/adjust', '/work-orders/cancel', '/online-rate/statistics', '/online-rate/managed-list'];
 
 // 路由守卫
 function ProtectedRoute({ children }) {
@@ -104,6 +126,8 @@ const pageTitles = {
   '/work-orders/open': '开通工单管理',
   '/work-orders/adjust': '调整工单管理',
   '/work-orders/cancel': '取消工单管理',
+  '/online-rate/statistics': '在线率统计分析',
+  '/online-rate/managed-list': '纳管清单信息',
 };
 
 function AppLayout() {
@@ -137,10 +161,11 @@ function AppLayout() {
   const selectedKey = allMenuKeys.includes(location.pathname)
     ? location.pathname
     : '/work-orders/open';
-  // 自动展开工单管理和统计分析父菜单
+  // 自动展开工单管理、统计分析和在线率管理父菜单
   const openKeys = [];
   if (location.pathname.startsWith('/work-orders')) openKeys.push('work-orders-group');
   if (location.pathname.startsWith('/statistics')) openKeys.push('statistics-group');
+  if (location.pathname.startsWith('/online-rate')) openKeys.push('online-rate-group');
 
   return (
     <Layout style={{ minHeight: '100vh' }}>
@@ -161,7 +186,7 @@ function AppLayout() {
           theme="dark"
           mode="inline"
           selectedKeys={[selectedKey]}
-          defaultOpenKeys={['work-orders-group', 'statistics-group']}
+          defaultOpenKeys={['work-orders-group', 'statistics-group', 'online-rate-group']}
           items={menuItems}
           onClick={({ key }) => navigate(key)}
         />
@@ -199,6 +224,8 @@ function AppLayout() {
             <Route path="/work-orders/cancel" element={<WorkOrderList isAdmin={isAdmin()} operationType="业务取消" pageTitle="取消工单管理" />} />
             {/* 旧路由兼容重定向 */}
             <Route path="/work-orders" element={<Navigate to="/work-orders/open" replace />} />
+            <Route path="/online-rate/statistics" element={<OnlineRateStatistics />} />
+            <Route path="/online-rate/managed-list" element={<ManagedList />} />
           </Routes>
         </Content>
       </Layout>
