@@ -306,13 +306,13 @@ export default function RequirementList() {
 
   return (
     <div>
+      <div style={{ position: 'sticky', top: 0, zIndex: 10, background: '#fff', padding: '16px 0 16px 0' }}>
       {/* 筛选栏 */}
       <div style={{
         background: '#fff',
         border: '1px solid #f0f0f0',
         borderRadius: 8,
         padding: '12px 0',
-        marginBottom: 16,
         boxShadow: '0 1px 2px rgba(0,0,0,0.03)',
       }}>
         {/* 第一行：搜索 + 操作 */}
@@ -422,11 +422,13 @@ export default function RequirementList() {
           <Col flex="1" />
         </Row>
       </div>
+      </div>
 
       <Table
         rowKey="id"
         components={components}
         columns={resizableColumns}
+        sticky={{ getContainer: () => document.getElementById('content-scroll'), offsetHeader: 133 }}
         dataSource={data}
         loading={loading}
         scroll={{ x: 'max-content' }}

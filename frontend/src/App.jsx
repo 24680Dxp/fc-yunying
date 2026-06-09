@@ -168,8 +168,8 @@ function AppLayout() {
   if (location.pathname.startsWith('/online-rate')) openKeys.push('online-rate-group');
 
   return (
-    <Layout style={{ minHeight: '100vh' }}>
-      <Sider width={200}>
+    <Layout style={{ height: '100vh' }}>
+      <Sider width={200} style={{ overflow: 'auto' }}>
         <div style={{
           height: 64,
           display: 'flex',
@@ -191,7 +191,7 @@ function AppLayout() {
           onClick={({ key }) => navigate(key)}
         />
       </Sider>
-      <Layout>
+      <Layout style={{ overflow: 'hidden' }}>
         <Header style={{
           background: '#fff',
           padding: '0 24px',
@@ -209,7 +209,7 @@ function AppLayout() {
             </Button>
           </Dropdown>
         </Header>
-        <Content style={{ margin: '0 24px 24px', background: '#fff', padding: '16px 24px', borderRadius: 8 }}>
+        <Content id="content-scroll" style={{ margin: '0 24px 24px', background: '#fff', padding: '0 24px 16px', borderRadius: 8, overflow: 'auto', flex: 1 }}>
           <Routes>
             <Route path="/" element={<Navigate to="/requirements" replace />} />
             <Route path="/requirements" element={<RequirementList />} />

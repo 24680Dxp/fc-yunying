@@ -200,6 +200,7 @@ export default function WorkOrderList({ isAdmin, operationType, pageTitle }) {
 
   return (
     <div>
+      <div style={{ position: 'sticky', top: 0, zIndex: 10, background: '#fff', padding: '16px 0 16px 0' }}>
       <Space style={{ marginBottom: 16, width: '100%', justifyContent: 'space-between' }}>
         <Space wrap>
           <Input
@@ -261,6 +262,7 @@ export default function WorkOrderList({ isAdmin, operationType, pageTitle }) {
           )}
         </Space>
       </Space>
+      </div>
 
       <Table
         rowKey="id"
@@ -269,6 +271,7 @@ export default function WorkOrderList({ isAdmin, operationType, pageTitle }) {
         dataSource={data}
         loading={loading}
         scroll={{ x: 'max-content' }}
+        sticky={{ getContainer: () => document.getElementById('content-scroll'), offsetHeader: 80 }}
         pagination={{
           current: page,
           pageSize,
