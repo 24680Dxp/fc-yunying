@@ -90,8 +90,9 @@ export default function StatisticsPage() {
 
   return (
     <div>
+      <div style={{ position: 'sticky', top: 0, zIndex: 10, background: '#fff', padding: '16px 0 16px 0' }}>
       {/* 总览卡片 */}
-      <Row gutter={[16, 16]} style={{ marginBottom: 24 }}>
+      <Row gutter={[16, 16]}>
         <Col xs={24} sm={12} md={6}>
           <Card style={cardStyle}>
             <Statistic
@@ -133,6 +134,7 @@ export default function StatisticsPage() {
           </Card>
         </Col>
       </Row>
+      </div>
 
       {/* 明细表格 */}
       <Row gutter={[16, 16]}>

@@ -71,8 +71,9 @@ export default function FullcycleStatisticsPage() {
 
   return (
     <div>
+      <div style={{ position: 'sticky', top: 0, zIndex: 10, background: '#fff', padding: '16px 0 16px 0' }}>
       {/* 总览卡片 */}
-      <Row gutter={[16, 16]} style={{ marginBottom: 24 }}>
+      <Row gutter={[16, 16]}>
         <Col xs={24} sm={12} md={8} lg={5}>
           <Card style={cardStyle}>
             <Statistic
@@ -140,6 +141,7 @@ export default function FullcycleStatisticsPage() {
           </Card>
         </Col>
       </Row>
+      </div>
 
       {/* 明细 */}
       <Row gutter={[16, 16]}>
