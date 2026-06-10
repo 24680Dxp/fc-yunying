@@ -109,6 +109,7 @@ export default function RequirementList() {
   const [filters, setFilters] = useState({});
   const [dateRange, setDateRange] = useState(null);
   const [selectedCity, setSelectedCity] = useState(undefined);
+  const [reqStatusFilter, setReqStatusFilter] = useState(undefined);
   const [form] = Form.useForm();
 
   // 可拖拽列宽（持久化到 localStorage）
@@ -182,6 +183,7 @@ export default function RequirementList() {
         search: search || undefined,
         ...filters,
       };
+      if (reqStatusFilter) params.req_status = reqStatusFilter;
       // 日期范围：格式化为 YYYY-MM-DD 字符串
       if (dateRange && dateRange[0]) {
         params.date_from = dateRange[0].format('YYYY-MM-DD');
@@ -198,7 +200,7 @@ export default function RequirementList() {
     setLoading(false);
   };
 
-  useEffect(() => { fetchData(); }, [page, filters, dateRange]);
+  useEffect(() => { fetchData(); }, [page, filters, dateRange, reqStatusFilter]);
 
   const handleSearch = () => {
     setPage(1);
@@ -262,6 +264,7 @@ export default function RequirementList() {
   const handleExport = async () => {
     try {
       const params = { search: search || undefined, ...filters };
+      if (reqStatusFilter) params.req_status = reqStatusFilter;
       if (dateRange && dateRange[0]) params.date_from = dateRange[0].format('YYYY-MM-DD');
       if (dateRange && dateRange[1]) params.date_to = dateRange[1].format('YYYY-MM-DD');
       const res = await exportRequirements(params);
@@ -301,11 +304,12 @@ export default function RequirementList() {
     setSearch('');
     setFilters({});
     setDateRange(null);
+    setReqStatusFilter(undefined);
     setPage(1);
   };
 
   return (
-    <div>
+    <div style={{ paddingBottom: 16 }}>
       <div style={{ position: 'sticky', top: 0, zIndex: 10, background: '#fff', padding: '16px 0 16px 0' }}>
       {/* 筛选栏 */}
       <div style={{
@@ -321,7 +325,7 @@ export default function RequirementList() {
             <div style={{ display: 'flex', gap: 12, alignItems: 'center' }}>
               <div style={{
                 border: '1px solid #d9d9d9', borderRadius: 6, display: 'flex', alignItems: 'center',
-                background: '#fff', overflow: 'hidden', flex: 1,
+                background: '#fff', overflow: 'hidden', width: 552,
               }}>
                 <span style={{
                   padding: '5px 12px', fontSize: 14, color: '#434343', whiteSpace: 'nowrap',
@@ -336,6 +340,22 @@ export default function RequirementList() {
                   allowClear
                   variant="borderless"
                   style={{ flex: 1 }}
+                />
+              </div>
+              <div style={{
+                border: '1px solid #d9d9d9', borderRadius: 6, display: 'flex', alignItems: 'center',
+                background: '#fff', overflow: 'hidden', width: 164,
+              }}>
+                <span style={{
+                  padding: '5px 12px', fontSize: 14, color: '#434343', whiteSpace: 'nowrap',
+                  borderRight: '1px solid #f0f0f0', userSelect: 'none',
+                }}>需求状态</span>
+                <Select
+                  placeholder="全部" allowClear variant="borderless"
+                  style={{ flex: 1, minWidth: 0 }}
+                  value={reqStatusFilter}
+                  onChange={(v) => { setReqStatusFilter(v); setPage(1); }}
+                  options={Object.keys(reqStatusLabels).map(k => ({ label: k, value: k }))}
                 />
               </div>
               <Button icon={<ReloadOutlined />} onClick={handleReset} style={{ fontSize: 14 }}>重置</Button>

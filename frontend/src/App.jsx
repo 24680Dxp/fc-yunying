@@ -209,7 +209,7 @@ function AppLayout() {
             </Button>
           </Dropdown>
         </Header>
-        <Content id="content-scroll" style={{ margin: '0 24px 24px', background: '#fff', padding: '0 24px 16px', borderRadius: 8, overflow: 'auto', flex: 1 }}>
+        <Content id="content-scroll" style={{ margin: '0 24px 24px', background: '#fff', padding: '0 24px 0', borderRadius: '8px 8px 0 0', overflowX: 'auto', overflowY: 'scroll', flex: 1 }}>
           <Routes>
             <Route path="/" element={<Navigate to="/requirements" replace />} />
             <Route path="/requirements" element={<RequirementList />} />

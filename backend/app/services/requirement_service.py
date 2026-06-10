@@ -78,8 +78,9 @@ class RequirementService:
         order_type: Optional[List[str]] = None,
         date_from: Optional[str] = None,
         date_to: Optional[str] = None,
+        req_status: Optional[str] = None,
     ) -> Tuple[List[Requirement], int]:
-        # Build filter conditions for count
+        # Build filter conditions
         filters = []
         if priority:
             filters.append(Requirement.priority == priority)
@@ -96,30 +97,45 @@ class RequirementService:
         if date_to:
             filters.append(Requirement.receive_date <= date_to)
 
-        # Count independently
+        # Build search condition
+        def search_condition():
+            return (
+                Requirement.owner_name.ilike(f"%{search}%")
+                | Requirement.outlet_code.ilike(f"%{search}%")
+                | Requirement.contact.ilike(f"%{search}%")
+                | Requirement.product_code.ilike(f"%{search}%")
+            )
+
+        # If req_status filter is set, query all matching items first,
+        # compute req_status, filter, then paginate
+        if req_status:
+            data_query = select(Requirement)
+            if filters:
+                data_query = data_query.where(*filters)
+            if search:
+                data_query = data_query.where(search_condition())
+            data_query = data_query.order_by(Requirement.created_at.desc())
+            all_items = list(db.execute(data_query).scalars().all())
+
+            # Compute req_status for each and filter
+            filtered = [r for r in all_items if _compute_req_status(r, db) == req_status]
+            total = len(filtered)
+            items = filtered[skip:skip + limit]
+            return items, total
+
+        # No req_status filter — use direct SQL count + pagination
         count_query = select(func.count()).select_from(Requirement)
         if filters:
             count_query = count_query.where(*filters)
         if search:
-            count_query = count_query.where(
-                Requirement.owner_name.ilike(f"%{search}%")
-                | Requirement.outlet_code.ilike(f"%{search}%")
-                | Requirement.contact.ilike(f"%{search}%")
-                | Requirement.product_code.ilike(f"%{search}%")
-            )
+            count_query = count_query.where(search_condition())
         total = db.execute(count_query).scalar()
 
-        # Build data query
         data_query = select(Requirement)
         if filters:
             data_query = data_query.where(*filters)
         if search:
-            data_query = data_query.where(
-                Requirement.owner_name.ilike(f"%{search}%")
-                | Requirement.outlet_code.ilike(f"%{search}%")
-                | Requirement.contact.ilike(f"%{search}%")
-                | Requirement.product_code.ilike(f"%{search}%")
-            )
+            data_query = data_query.where(search_condition())
         data_query = data_query.order_by(Requirement.created_at.desc())
         data_query = data_query.offset(skip).limit(limit)
         items = list(db.execute(data_query).scalars().all())

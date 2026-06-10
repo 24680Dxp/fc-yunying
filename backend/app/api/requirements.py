@@ -150,6 +150,7 @@ def export_requirements(
     order_type: Optional[List[str]] = Query(None, description="工单类型（多选）"),
     date_from: Optional[str] = Query(None, description="接收日期起"),
     date_to: Optional[str] = Query(None, description="接收日期止"),
+    req_status: Optional[str] = Query(None, description="需求状态（待评审/处理中/已完工/待开发）"),
     db: Session = Depends(get_db),
     _: User = Depends(require_admin),
 ):
@@ -164,6 +165,7 @@ def export_requirements(
         order_type=order_type,
         date_from=date_from,
         date_to=date_to,
+        req_status=req_status,
     )
 
     output = StringIO()
@@ -205,9 +207,10 @@ def list_requirements(
     order_type: Optional[List[str]] = Query(None, description="工单类型（多选）"),
     date_from: Optional[str] = Query(None, description="接收日期起"),
     date_to: Optional[str] = Query(None, description="接收日期止"),
+    req_status: Optional[str] = Query(None, description="需求状态（待评审/处理中/已完工/待开发）"),
     db: Session = Depends(get_db),
 ):
-    logger.info(f"list_requirements: city={city!r}, order_type={order_type!r}")
+    logger.info(f"list_requirements: city={city!r}, order_type={order_type!r}, req_status={req_status!r}")
     items, total = RequirementService.list_requirements(
         db,
         skip=skip,
@@ -220,6 +223,7 @@ def list_requirements(
         order_type=order_type,
         date_from=date_from,
         date_to=date_to,
+        req_status=req_status,
     )
     logger.info(f"result: total={total}, items={len(items)}")
     return RequirementList(
