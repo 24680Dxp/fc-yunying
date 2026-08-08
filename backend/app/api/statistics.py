@@ -1,3 +1,6 @@
+from datetime import datetime, date
+from collections import defaultdict
+
 from fastapi import APIRouter, Depends
 from sqlalchemy import func, select
 from sqlalchemy.orm import Session
@@ -488,3 +491,337 @@ def fullcycle_by_city(db: Session = Depends(get_db)):
             total=v["operation_count"] + v["hist_count"],
         ))
     return result
+
+
+# ===== 数据画像 =====
+
+def _normalize_product(cat: str) -> str:
+    """产品分类标准化：视频算力一张网/接入和云存储功能费用 → 千里眼"""
+    if cat in ("视频算力一张网", "接入和云存储功能费用"):
+        return "千里眼"
+    return "互联网专线"
+
+
+def _normalize_biz(op_type: str) -> str:
+    """操作类型 → 业务大类"""
+    mapping = {"业务开通": "开通", "业务调整": "调整", "业务取消": "销户"}
+    return mapping.get(op_type, op_type)
+
+
+@router.get("/portrait")
+def get_portrait(db: Session = Depends(get_db)):
+    """工单数据画像 — 全方位分析运营期工单"""
+    all_orders = db.execute(select(WorkOrder)).scalars().all()
+    today = date.today()
+
+    records = []
+    for wo in all_orders:
+        r = {
+            "product": _normalize_product(wo.product_category or ""),
+            "biz": _normalize_biz(wo.operation_type or ""),
+            "status": wo.status or "",
+            "city": (wo.business_location_city or "").strip(),
+            "step": wo.current_step or "",
+            "dispatch_time": wo.dispatch_time or "",
+        }
+        backlog = 0
+        if r["status"] == "开通中" and r["dispatch_time"]:
+            try:
+                dt = datetime.strptime(r["dispatch_time"][:10], "%Y-%m-%d").date()
+                backlog = (today - dt).days
+            except Exception:
+                pass
+        r["backlog"] = backlog
+        records.append(r)
+
+    if not records:
+        return {"overview": {"total_detail_rows": 0}, "generated_at": datetime.now().strftime("%Y-%m-%d %H:%M:%S")}
+
+    total = len(records)
+    completed = sum(1 for r in records if r["status"] == "已归档")
+    inprog = total - completed
+
+    # overview
+    times = [r["dispatch_time"] for r in records if r["dispatch_time"]]
+    sheets = {"销户": 0, "开通": 0, "调整": 0}
+    for r in records:
+        if r["biz"] in sheets:
+            sheets[r["biz"]] += 1
+
+    overview = {
+        "total_detail_rows": total, "total_columns": 14,
+        "sheets": {k: {"rows": v, "cols": 14} for k, v in sheets.items()},
+        "time_range": {"start": min(times) if times else "", "end": max(times) if times else ""},
+        "overall_completion_rate": round(completed / total * 100, 2),
+        "overall_in_progress_rate": round(inprog / total * 100, 2),
+        "total_completed": completed, "total_in_progress": inprog,
+    }
+
+    # helpers
+    def _group_stats(key_func, label_key):
+        agg = defaultdict(lambda: {"total": 0, "completed": 0})
+        for r in records:
+            k = key_func(r)
+            agg[k]["total"] += 1
+            if r["status"] == "已归档":
+                agg[k]["completed"] += 1
+        return [{
+            label_key: k, "total_orders": v["total"], "completed": v["completed"],
+            "in_progress": v["total"] - v["completed"],
+            "completion_rate": round(v["completed"] / v["total"] * 100, 2) if v["total"] > 0 else 0,
+            "in_progress_rate": round((v["total"] - v["completed"]) / v["total"] * 100, 2) if v["total"] > 0 else 0,
+        } for k, v in agg.items()]
+
+    product_stats = _group_stats(lambda r: r["product"], "产品分类")
+
+    # product_detail_stats
+    detail_agg = defaultdict(lambda: {"total": 0, "completed": 0})
+    for wo in all_orders:
+        cat = wo.product_category or "未知"
+        detail_agg[cat]["total"] += 1
+        if wo.status == "已归档":
+            detail_agg[cat]["completed"] += 1
+    product_detail_stats = [{
+        "产品分类": k, "total_orders": v["total"], "completed": v["completed"],
+        "in_progress": v["total"] - v["completed"],
+        "completion_rate": round(v["completed"] / v["total"] * 100, 2) if v["total"] > 0 else 0,
+    } for k, v in detail_agg.items()]
+
+    # product_biz_summary
+    pbs = []
+    for prod in ["互联网专线", "千里眼"]:
+        for biz in ["开通", "调整", "销户"]:
+            g = [r for r in records if r["product"] == prod and r["biz"] == biz]
+            comp = sum(1 for r in g if r["status"] == "已归档")
+            pbs.append({"产品分类": prod, "业务类型": biz, "完成工单数量": comp, "在途工单数量": len(g) - comp, "合计工单数量": len(g)})
+        g = [r for r in records if r["product"] == prod]
+        comp = sum(1 for r in g if r["status"] == "已归档")
+        pbs.append({"产品分类": prod, "业务类型": "小计", "完成工单数量": comp, "在途工单数量": len(g) - comp, "合计工单数量": len(g)})
+    pbs.append({"产品分类": "总计", "业务类型": "总计", "完成工单数量": completed, "在途工单数量": inprog, "合计工单数量": total})
+
+    biz_stats = _group_stats(lambda r: r["biz"], "业务类型")
+
+    # city_stats
+    city_agg = defaultdict(lambda: {"total": 0, "completed": 0})
+    for r in records:
+        if r["city"]:
+            city_agg[r["city"]]["total"] += 1
+            if r["status"] == "已归档":
+                city_agg[r["city"]]["completed"] += 1
+    city_stats = []
+    for city, v in sorted(city_agg.items(), key=lambda x: -x[1]["total"]):
+        city_stats.append({
+            "地市": city, "total_orders": v["total"], "completed": v["completed"],
+            "in_progress": v["total"] - v["completed"],
+            "completion_rate": round(v["completed"] / v["total"] * 100, 2) if v["total"] > 0 else 0,
+            "in_progress_rate": round((v["total"] - v["completed"]) / v["total"] * 100, 2) if v["total"] > 0 else 0,
+        })
+    city_completion_ranking = sorted(city_stats, key=lambda x: x["completion_rate"])
+
+    # city_summary
+    cities = sorted(set(r["city"] for r in records if r["city"]))
+    city_summary = []
+    for city in cities:
+        g = [r for r in records if r["city"] == city]
+        row = {"业务所属地市": city}
+        for prod in ["互联网专线", "千里眼"]:
+            pg = [r for r in g if r["product"] == prod]
+            row[f"{prod}-完成"] = sum(1 for r in pg if r["status"] == "已归档")
+            row[f"{prod}-在途"] = sum(1 for r in pg if r["status"] == "开通中")
+            inprog_pg = [r for r in pg if r["status"] == "开通中"]
+            for biz in ["开通", "调整", "销户"]:
+                row[f"{prod}-{biz}在途"] = sum(1 for r in inprog_pg if r["biz"] == biz)
+            row[f"{prod}-合计"] = len(pg)
+        row["总计-完成"] = sum(1 for r in g if r["status"] == "已归档")
+        row["总计-在途"] = sum(1 for r in g if r["status"] == "开通中")
+        row["总计-合计"] = len(g)
+        city_summary.append(row)
+    total_row = {"业务所属地市": "总计"}
+    for prod in ["互联网专线", "千里眼"]:
+        pg = [r for r in records if r["product"] == prod]
+        total_row[f"{prod}-完成"] = sum(1 for r in pg if r["status"] == "已归档")
+        total_row[f"{prod}-在途"] = sum(1 for r in pg if r["status"] == "开通中")
+        inprog_pg = [r for r in pg if r["status"] == "开通中"]
+        for biz in ["开通", "调整", "销户"]:
+            total_row[f"{prod}-{biz}在途"] = sum(1 for r in inprog_pg if r["biz"] == biz)
+        total_row[f"{prod}-合计"] = len(pg)
+    total_row["总计-完成"] = completed
+    total_row["总计-在途"] = inprog
+    total_row["总计-合计"] = total
+    city_summary.append(total_row)
+
+    # step stats
+    step_dist = defaultdict(int)
+    step_inprog = defaultdict(int)
+    isp = {"互联网专线": defaultdict(int), "千里眼": defaultdict(int)}
+    isb = {"开通": defaultdict(int), "调整": defaultdict(int), "销户": defaultdict(int)}
+    for r in records:
+        if r["step"]:
+            step_dist[r["step"]] += 1
+            if r["status"] == "开通中":
+                step_inprog[r["step"]] += 1
+                isp[r["product"]][r["step"]] += 1
+                isb[r["biz"]][r["step"]] += 1
+
+    # monthly trend
+    month_agg = defaultdict(lambda: {"total": 0, "completed": 0})
+    cmb = {"开通": defaultdict(int), "调整": defaultdict(int), "销户": defaultdict(int)}
+    cmp = {"互联网专线": defaultdict(int), "千里眼": defaultdict(int)}
+    for r in records:
+        dt = r["dispatch_time"]
+        if dt and len(dt) >= 7:
+            m = dt[:7]
+            month_agg[m]["total"] += 1
+            if r["status"] == "已归档":
+                month_agg[m]["completed"] += 1
+            cmb[r["biz"]][m] += 1
+            cmp[r["product"]][m] += 1
+
+    months = sorted(month_agg.keys())
+    monthly_trend = []
+    for m in months:
+        t = month_agg[m]["total"]
+        c = month_agg[m]["completed"]
+        monthly_trend.append({
+            "月份": m, "total_orders": t, "completed": c, "in_progress": t - c,
+            "completion_rate": round(c / t * 100, 2) if t > 0 else 0,
+        })
+
+    # cross tables
+    cpb = {}
+    for biz in ["开通", "调整", "销户"]:
+        cpb[biz] = {}
+        for prod in ["互联网专线", "千里眼"]:
+            g = [r for r in records if r["biz"] == biz and r["product"] == prod]
+            cpb[biz][prod] = round(sum(1 for r in g if r["status"] == "已归档") / len(g) * 100, 2) if g else 0
+
+    ccp, ccb = {}, {}
+    for prod in ["互联网专线", "千里眼", "总计"]:
+        ccp[prod] = {c: sum(1 for r in records if r["city"] == c and (prod == "总计" or r["product"] == prod)) for c in cities}
+    for biz in ["开通", "调整", "销户", "总计"]:
+        ccb[biz] = {c: sum(1 for r in records if r["city"] == c and (biz == "总计" or r["biz"] == biz)) for c in cities}
+
+    # deep analysis helper
+    def _deep_analysis(items):
+        if not items:
+            return {"total": 0}
+        result = {"total": len(items)}
+        sc = defaultdict(int)
+        pc = defaultdict(int)
+        for r in items:
+            if r["step"]:
+                sc[r["step"]] += 1
+            pc[r["product"]] += 1
+        result["step_distribution"] = dict(sc)
+        result["product_distribution"] = dict(pc)
+
+        # city top15
+        cagg = defaultdict(lambda: {"total": 0, "千里眼": 0, "互联网专线": 0, "steps": defaultdict(int)})
+        for r in items:
+            c = r["city"] or "未知"
+            cagg[c]["total"] += 1
+            cagg[c][r["product"]] += 1
+            if r["step"]:
+                cagg[c]["steps"][r["step"]] += 1
+        clist = []
+        for c, v in cagg.items():
+            ms = max(v["steps"], key=v["steps"].get) if v["steps"] else ""
+            clist.append({"city": c, "total": v["total"], "千里眼": v["千里眼"], "互联网专线": v["互联网专线"], "main_step": ms, "main_step_count": v["steps"][ms] if ms else 0})
+        clist.sort(key=lambda x: x["total"], reverse=True)
+        result["city_distribution"] = clist[:15]
+
+        bls = [r["backlog"] for r in items if r["backlog"] > 0]
+        if bls:
+            sbls = sorted(bls)
+            result["backlog_days"] = {
+                "mean": round(sum(bls) / len(bls), 1), "median": sbls[len(bls) // 2],
+                "max": max(bls), "min": min(bls),
+                "over_30": sum(1 for d in bls if d > 30),
+                "over_60": sum(1 for d in bls if d > 60),
+                "over_90": sum(1 for d in bls if d > 90),
+            }
+
+        # top10 oldest
+        sorted_items = sorted(items, key=lambda r: r["backlog"], reverse=True)
+        result["top10_oldest"] = [{"产品": r["product"], "环节": r["step"], "地市": r["city"], "积压天数": r["backlog"], "派单时间": r["dispatch_time"]} for r in sorted_items[:10]]
+
+        # step product cross
+        sp = defaultdict(lambda: defaultdict(int))
+        for r in items:
+            if r["step"]:
+                sp[r["step"]][r["product"]] += 1
+        result["step_product_cross"] = {k: dict(v) for k, v in sp.items()}
+
+        # monthly
+        mc = defaultdict(int)
+        for r in items:
+            if r["dispatch_time"] and len(r["dispatch_time"]) >= 7:
+                mc[r["dispatch_time"][:7]] += 1
+        result["monthly_count"] = dict(sorted(mc.items()))
+
+        # backlog bins
+        bins = [(0, 7, "0-7天"), (8, 30, "8-30天"), (31, 60, "31-60天"), (61, 90, "61-90天"), (91, 999, "90天以上")]
+        result["backlog_bins"] = [{"range": label, "count": sum(1 for r in items if lo <= r["backlog"] <= hi)} for lo, hi, label in bins]
+
+        return result
+
+    adj_records = [r for r in records if r["biz"] == "调整" and r["status"] == "开通中"]
+    adjustment_inprogress = _deep_analysis(adj_records)
+
+    can_records = [r for r in records if r["biz"] == "销户" and r["status"] == "开通中"]
+    cancellation_inprogress = _deep_analysis(can_records)
+
+    # Meizhou deep
+    mz_records = [r for r in can_records if r["city"] == "梅州"]
+    if mz_records:
+        mz = {"total": len(mz_records)}
+        pc = defaultdict(int)
+        sc_all = defaultdict(int)
+        sc_qly = defaultdict(int)
+        sc_zl = defaultdict(int)
+        for r in mz_records:
+            pc[r["product"]] += 1
+            if r["step"]:
+                sc_all[r["step"]] += 1
+                if r["product"] == "千里眼":
+                    sc_qly[r["step"]] += 1
+                else:
+                    sc_zl[r["step"]] += 1
+        mz["千里眼"] = pc.get("千里眼", 0)
+        mz["互联网专线"] = pc.get("互联网专线", 0)
+        mz["steps"] = dict(sc_all)
+        mz["qly_steps"] = dict(sc_qly)
+        mz["zl_steps"] = dict(sc_zl)
+        cancellation_inprogress["meizhou_deep"] = mz
+
+    # Batch dispatch days
+    day_counts = defaultdict(int)
+    for r in can_records:
+        if r["dispatch_time"] and len(r["dispatch_time"]) >= 10:
+            day_counts[r["dispatch_time"][:10]] += 1
+    cancellation_inprogress["batch_dispatch_days"] = dict(sorted({d: c for d, c in day_counts.items() if c >= 5}.items()))
+
+    return {
+        "overview": overview,
+        "product_stats": product_stats,
+        "product_detail_stats": product_detail_stats,
+        "product_biz_summary": pbs,
+        "biz_stats": biz_stats,
+        "city_stats": city_stats,
+        "city_completion_ranking": city_completion_ranking,
+        "city_summary": city_summary,
+        "status_stats": {"开通中": inprog, "已归档": completed},
+        "step_distribution": dict(step_dist),
+        "step_inprogress": dict(step_inprog),
+        "inprog_step_product": {k: dict(v) for k, v in isp.items()},
+        "inprog_step_biz": {k: dict(v) for k, v in isb.items()},
+        "monthly_trend": monthly_trend,
+        "cross_month_biz": {k: dict(v) for k, v in cmb.items()},
+        "cross_month_product": {k: dict(v) for k, v in cmp.items()},
+        "cross_product_biz": cpb,
+        "cross_city_product": ccp,
+        "cross_city_biz": ccb,
+        "adjustment_inprogress": adjustment_inprogress,
+        "cancellation_inprogress": cancellation_inprogress,
+        "generated_at": datetime.now().strftime("%Y-%m-%d %H:%M:%S"),
+    }

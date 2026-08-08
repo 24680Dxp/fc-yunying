@@ -17,6 +17,7 @@ import {
   DashboardOutlined,
   DatabaseOutlined,
   MonitorOutlined,
+  PieChartOutlined,
 } from '@ant-design/icons';
 import { getUser, clearAuth, isAdmin } from './api/auth';
 import RequirementList from './pages/RequirementList';
@@ -24,6 +25,7 @@ import WorkOrderList from './pages/WorkOrderList';
 import StatisticsPage from './pages/StatisticsPage';
 import ProjectStatisticsPage from './pages/ProjectStatisticsPage';
 import FullcycleStatisticsPage from './pages/FullcycleStatisticsPage';
+import DataPortraitPage from './pages/DataPortraitPage';
 import HistoricalWorkOrderList from './pages/HistoricalWorkOrderList';
 import OnlineRateStatistics from './pages/OnlineRateStatistics';
 import ManagedList from './pages/ManagedList';
@@ -42,6 +44,11 @@ const menuItems = [
     icon: <BarChartOutlined />,
     label: '统计分析',
     children: [
+      {
+        key: '/statistics/portrait',
+        icon: <PieChartOutlined />,
+        label: '数据画像',
+      },
       {
         key: '/statistics/fullcycle',
         icon: <SyncOutlined />,
@@ -106,7 +113,7 @@ const menuItems = [
 ];
 
 // 扁平化获取所有子菜单key
-const allMenuKeys = ['/requirements', '/historical-work-orders', '/statistics/fullcycle', '/statistics/operations', '/statistics/construction', '/work-orders/open', '/work-orders/adjust', '/work-orders/cancel', '/online-rate/statistics', '/online-rate/managed-list'];
+const allMenuKeys = ['/requirements', '/historical-work-orders', '/statistics/portrait', '/statistics/fullcycle', '/statistics/operations', '/statistics/construction', '/work-orders/open', '/work-orders/adjust', '/work-orders/cancel', '/online-rate/statistics', '/online-rate/managed-list'];
 
 // 路由守卫
 function ProtectedRoute({ children }) {
@@ -120,6 +127,7 @@ function ProtectedRoute({ children }) {
 const pageTitles = {
   '/requirements': '需求管理',
   '/historical-work-orders': '历史工单信息',
+  '/statistics/portrait': '工单数据画像',
   '/statistics/fullcycle': '全周期统计分析',
   '/statistics/operations': '运营期统计分析',
   '/statistics/construction': '建设期统计分析',
@@ -214,6 +222,7 @@ function AppLayout() {
             <Route path="/" element={<Navigate to="/requirements" replace />} />
             <Route path="/requirements" element={<RequirementList />} />
             <Route path="/historical-work-orders" element={<HistoricalWorkOrderList isAdmin={isAdmin()} />} />
+            <Route path="/statistics/portrait" element={<DataPortraitPage />} />
             <Route path="/statistics/operations" element={<StatisticsPage />} />
             <Route path="/statistics/construction" element={<ProjectStatisticsPage />} />
             <Route path="/statistics/fullcycle" element={<FullcycleStatisticsPage />} />

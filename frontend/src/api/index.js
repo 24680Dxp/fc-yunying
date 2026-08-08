@@ -182,6 +182,12 @@ export function getFullcycleByCity() {
   return authApi.get('/statistics/fullcycle-by-city');
 }
 
+// ===== 数据画像 =====
+
+export function getPortraitData() {
+  return authApi.get('/statistics/portrait');
+}
+
 // ===== 历史工单管理 =====
 
 export function getHistoricalWorkOrders(params = {}) {
