@@ -145,15 +145,7 @@ export default function DataPortraitPage() {
         </Col>
       </Row>
 
-      {/* Section 3: Product x Biz Cross - Heatmap */}
-      <SectionTitle>产品 × 业务交叉分析</SectionTitle>
-      <Card size="small" title="完成率矩阵（热力图）" bodyStyle={{ padding: 8 }}>
-        <React.Suspense fallback={<div style={{ height: 240 }} />}>
-          <HeatmapChart data={data} />
-        </React.Suspense>
-      </Card>
-
-      {/* Section 4: City */}
+      {/* Section 3: City */}
       <SectionTitle>地市维度</SectionTitle>
       <Row gutter={12}>
         <Col span={12}>
@@ -172,26 +164,15 @@ export default function DataPortraitPage() {
         </Col>
       </Row>
 
-      {/* Section 5: Step Bottleneck */}
+      {/* Section 4: Step Bottleneck */}
       <SectionTitle>环节瓶颈分析（在途工单）</SectionTitle>
-      <Row gutter={12}>
-        <Col span={12}>
-          <Card size="small" title="在途工单环节分布" bodyStyle={{ padding: 8 }}>
-            <React.Suspense fallback={<div style={{ height: 300 }} />}>
-              <StepDist data={data} />
-            </React.Suspense>
-          </Card>
-        </Col>
-        <Col span={12}>
-          <Card size="small" title="环节 × 产品交叉" bodyStyle={{ padding: 8 }}>
-            <React.Suspense fallback={<div style={{ height: 300 }} />}>
-              <StepProduct data={data} />
-            </React.Suspense>
-          </Card>
-        </Col>
-      </Row>
+      <Card size="small" title="环节 × 产品交叉" bodyStyle={{ padding: 8 }}>
+        <React.Suspense fallback={<div style={{ height: 300 }} />}>
+          <StepProduct data={data} />
+        </React.Suspense>
+      </Card>
 
-      {/* Section 6: Time Trend */}
+      {/* Section 5: Time Trend */}
       <SectionTitle>时间趋势</SectionTitle>
       <Card size="small" title="月度派单量趋势" bodyStyle={{ padding: 8 }} style={{ marginBottom: 12 }}>
         <React.Suspense fallback={<div style={{ height: 320 }} />}>
@@ -215,20 +196,20 @@ export default function DataPortraitPage() {
         </Col>
       </Row>
 
-      {/* Section 7: Adjustment In-Progress Deep */}
+      {/* Section 6: Adjustment In-Progress Deep */}
       <SectionTitle>调整在途深度分析（{data.adjustment_inprogress?.total || 0}单）</SectionTitle>
       <Row gutter={12}>
         <Col span={12}>
-          <Card size="small" title="在途环节分布" bodyStyle={{ padding: 8 }}>
-            <React.Suspense fallback={<div style={{ height: 300 }} />}>
-              <AdjStep data={data} />
+          <Card size="small" title="地市 × 积压区间 TOP8" bodyStyle={{ padding: 8 }}>
+            <React.Suspense fallback={<div style={{ height: 320 }} />}>
+              <AdjCityBacklog data={data} />
             </React.Suspense>
           </Card>
         </Col>
         <Col span={12}>
-          <Card size="small" title="积压天数分布" bodyStyle={{ padding: 8 }}>
-            <React.Suspense fallback={<div style={{ height: 300 }} />}>
-              <AdjBacklog data={data} />
+          <Card size="small" title="地市 × 积压产品 TOP8" bodyStyle={{ padding: 8 }}>
+            <React.Suspense fallback={<div style={{ height: 320 }} />}>
+              <AdjCityProduct data={data} />
             </React.Suspense>
           </Card>
         </Col>
@@ -250,20 +231,20 @@ export default function DataPortraitPage() {
         </Col>
       </Row>
 
-      {/* Section 8: Cancellation In-Progress Deep */}
+      {/* Section 7: Cancellation In-Progress Deep */}
       <SectionTitle>销户在途深度分析（{data.cancellation_inprogress?.total || 0}单）</SectionTitle>
       <Row gutter={12}>
         <Col span={12}>
-          <Card size="small" title="在途环节分布" bodyStyle={{ padding: 8 }}>
-            <React.Suspense fallback={<div style={{ height: 300 }} />}>
-              <CanStep data={data} />
+          <Card size="small" title="地市 × 积压区间 TOP8" bodyStyle={{ padding: 8 }}>
+            <React.Suspense fallback={<div style={{ height: 320 }} />}>
+              <CanCityBacklog data={data} />
             </React.Suspense>
           </Card>
         </Col>
         <Col span={12}>
-          <Card size="small" title="积压天数分布" bodyStyle={{ padding: 8 }}>
-            <React.Suspense fallback={<div style={{ height: 300 }} />}>
-              <CanBacklog data={data} />
+          <Card size="small" title="地市 × 积压产品 TOP8" bodyStyle={{ padding: 8 }}>
+            <React.Suspense fallback={<div style={{ height: 320 }} />}>
+              <CanCityProduct data={data} />
             </React.Suspense>
           </Card>
         </Col>
@@ -308,7 +289,7 @@ export default function DataPortraitPage() {
         </>
       )}
 
-      {/* Section 9: Risk Cards */}
+      {/* Section 8: Risk Cards */}
       <SectionTitle>风险提示</SectionTitle>
       <div style={{ display: 'grid', gridTemplateColumns: 'repeat(4, 1fr)', gap: 12, marginBottom: 24 }}>
         <RiskCards data={data} />
@@ -388,26 +369,6 @@ function BizStack({ data }) {
   return <ReactECharts option={option} style={{ height: 300 }} opts={defaultOpts} notMerge={notMerge} />;
 }
 
-function HeatmapChart({ data }) {
-  const cpb = data.cross_product_biz || {};
-  const prods = ['互联网专线', '千里眼'];
-  const bizs = ['开通', '调整', '销户'];
-  const hd = [];
-  bizs.forEach((biz, yi) => {
-    prods.forEach((prod, xi) => {
-      hd.push([xi, yi, (cpb[biz] || {})[prod] || 0]);
-    });
-  });
-  const option = {
-    tooltip: { formatter: (p) => prods[p.value[0]] + ' × ' + bizs[p.value[1]] + '<br/>完成率: ' + p.value[2] + '%' },
-    xAxis: { type: 'category', data: prods, splitArea: { show: true } },
-    yAxis: { type: 'category', data: bizs, splitArea: { show: true } },
-    visualMap: { min: 0, max: 100, inRange: { color: ['#ffcdd2', '#fff9c4', '#c8e6c9'] }, show: false },
-    series: [{ type: 'heatmap', data: hd, label: { show: true, formatter: '{c}%' } }],
-  };
-  return <ReactECharts option={option} style={{ height: 240 }} opts={defaultOpts} notMerge={notMerge} />;
-}
-
 function CityVolume({ data }) {
   const cs = (data.city_stats || []).slice(0, 15).reverse();
   const option = {
@@ -439,31 +400,16 @@ function CityRate({ data }) {
   return <ReactECharts option={option} style={{ height: 400 }} opts={defaultOpts} notMerge={notMerge} />;
 }
 
-function StepDist({ data }) {
-  const si = data.step_inprogress || {};
-  const entries = Object.entries(si).sort((a, b) => b[1] - a[1]);
-  const option = {
-    tooltip: { trigger: 'axis' },
-    xAxis: { type: 'category', data: entries.map(e => e[0]), axisLabel: { rotate: 30 } },
-    yAxis: { type: 'value' },
-    series: [{
-      type: 'bar', data: entries.map(e => e[1]),
-      itemStyle: { color: (p) => p.value >= 100 ? chartColors.inprogress : p.value >= 50 ? chartColors.qianliyan : chartColors.internet },
-      label: { show: true, position: 'top' },
-    }],
-  };
-  return <ReactECharts option={option} style={{ height: 300 }} opts={defaultOpts} notMerge={notMerge} />;
-}
-
 function StepProduct({ data }) {
   const isp = data.inprog_step_product || {};
   const iKeys = Object.keys(isp['互联网专线'] || {});
   const qKeys = Object.keys(isp['千里眼'] || {});
-  const uniqueSteps = [...new Set([...iKeys, ...qKeys])].sort((a, b) => {
-    const va = (isp['互联网专线'] || {})[a] || 0 + (isp['千里眼'] || {})[a] || 0;
-    const vb = (isp['互联网专线'] || {})[b] || 0 + (isp['千里眼'] || {})[b] || 0;
-    return vb - va;
+  const allSteps = [...new Set([...iKeys, ...qKeys])];
+  const stepTotals = {};
+  allSteps.forEach(s => {
+    stepTotals[s] = ((isp['互联网专线'] || {})[s] || 0) + ((isp['千里眼'] || {})[s] || 0);
   });
+  const uniqueSteps = allSteps.sort((a, b) => stepTotals[b] - stepTotals[a]);
   const option = {
     tooltip: { trigger: 'axis' },
     legend: { data: ['互联网专线', '千里眼'] },
@@ -471,7 +417,9 @@ function StepProduct({ data }) {
     yAxis: { type: 'value' },
     series: [
       { name: '互联网专线', type: 'bar', stack: 'total', data: uniqueSteps.map(s => (isp['互联网专线'] || {})[s] || 0), itemStyle: { color: chartColors.internet } },
-      { name: '千里眼', type: 'bar', stack: 'total', data: uniqueSteps.map(s => (isp['千里眼'] || {})[s] || 0), itemStyle: { color: chartColors.qianliyan } },
+      { name: '千里眼', type: 'bar', stack: 'total', data: uniqueSteps.map(s => (isp['千里眼'] || {})[s] || 0), itemStyle: { color: chartColors.qianliyan },
+        label: { show: true, position: 'top', formatter: (p) => stepTotals[uniqueSteps[p.dataIndex]] || '' },
+      },
     ],
   };
   return <ReactECharts option={option} style={{ height: 300 }} opts={defaultOpts} notMerge={notMerge} />;
@@ -527,31 +475,71 @@ function MonthBiz({ data }) {
 }
 
 // Adjustment deep charts
-function AdjStep({ data }) {
+function AdjCityDist({ data }) {
   const adj = data.adjustment_inprogress || {};
-  const steps = adj.step_distribution || {};
-  const entries = Object.entries(steps).sort((a, b) => b[1] - a[1]);
+  const cities = (adj.city_distribution || []).slice(0, 8).reverse();
   const option = {
     tooltip: { trigger: 'axis' },
-    xAxis: { type: 'category', data: entries.map(e => e[0]), axisLabel: { rotate: 30 } },
-    yAxis: { type: 'value' },
-    series: [{ type: 'bar', data: entries.map(e => e[1]), itemStyle: { color: chartColors.inprogress }, label: { show: true, position: 'top' } }],
+    grid: { left: 80, right: 40 },
+    xAxis: { type: 'value' },
+    yAxis: { type: 'category', data: cities.map(c => c.city), inverse: true },
+    series: [
+      { type: 'bar', data: cities.map(c => c.total), itemStyle: { color: chartColors.inprogress }, label: { show: true, position: 'right' } },
+    ],
   };
   return <ReactECharts option={option} style={{ height: 300 }} opts={defaultOpts} notMerge={notMerge} />;
 }
 
-function AdjBacklog({ data }) {
+const backlogBinColors = ['#c8e6c9', '#fff9c4', '#ffcc80', '#ef9a9a', '#e53935'];
+function AdjCityBacklog({ data }) {
   const adj = data.adjustment_inprogress || {};
-  const bins = adj.backlog_bins || [];
+  const cbb = adj.city_backlog_bins || {};
+  const cities = cbb.cities || [];
+  const bins = cbb.bins || [];
+  const cellData = cbb.data || {};
+  if (!cities.length) return <div style={{ height: 300, display: 'flex', alignItems: 'center', justifyContent: 'center', color: '#999' }}>暂无数据</div>;
+
+  const cityTotals = cities.map(c => bins.reduce((sum, bin) => sum + ((cellData[c] || {})[bin] || 0), 0));
+
   const option = {
-    tooltip: { trigger: 'axis' },
-    xAxis: { type: 'category', data: bins.map(b => b.range) },
-    yAxis: { type: 'value' },
-    series: [{
-      type: 'bar', data: bins.map(b => b.count),
-      itemStyle: { color: (p) => p.dataIndex >= 3 ? chartColors.inprogress : p.dataIndex >= 2 ? chartColors.qianliyan : chartColors.internet },
-      label: { show: true, position: 'top' },
-    }],
+    tooltip: { trigger: 'axis', axisPointer: { type: 'shadow' } },
+    legend: { data: bins, top: 0 },
+    grid: { left: 80, right: 40, top: 40 },
+    xAxis: { type: 'value' },
+    yAxis: { type: 'category', data: cities.map((c, i) => `${c} (${cityTotals[i]})`), inverse: true },
+    series: bins.map((bin, i) => ({
+      name: bin, type: 'bar', stack: 'total',
+      data: cities.map(c => (cellData[c] || {})[bin] || 0),
+      itemStyle: { color: backlogBinColors[i] },
+      label: { show: false },
+    })),
+  };
+  return <ReactECharts option={option} style={{ height: 300 }} opts={defaultOpts} notMerge={notMerge} />;
+}
+
+const productColors = ['#ff7043', '#42a5f5']; // 千里眼, 互联网专线
+function AdjCityProduct({ data }) {
+  const adj = data.adjustment_inprogress || {};
+  const cpb = adj.city_product_bins || {};
+  const cities = cpb.cities || [];
+  const prods = cpb.products || [];
+  const cellData = cpb.data || {};
+  if (!cities.length) return <div style={{ height: 300, display: 'flex', alignItems: 'center', justifyContent: 'center', color: '#999' }}>暂无数据</div>;
+
+  const cityTotals = cities.map(c => prods.reduce((sum, p) => sum + ((cellData[c] || {})[p] || 0), 0));
+
+  const option = {
+    tooltip: { trigger: 'axis', axisPointer: { type: 'shadow' } },
+    legend: { data: prods, top: 0 },
+    grid: { left: 80, right: 40, top: 40 },
+    xAxis: { type: 'value' },
+    yAxis: { type: 'category', data: cities.map((c, i) => `${c} (${cityTotals[i]})`), inverse: true },
+    series: prods.map((prod, i) => ({
+      name: prod, type: 'bar', stack: 'total',
+      data: cities.map(c => (cellData[c] || {})[prod] || 0),
+      itemStyle: { color: productColors[i] },
+      label: { show: false },
+    })),
   };
   return <ReactECharts option={option} style={{ height: 300 }} opts={defaultOpts} notMerge={notMerge} />;
 }
@@ -559,11 +547,12 @@ function AdjBacklog({ data }) {
 function AdjStepProd({ data }) {
   const adj = data.adjustment_inprogress || {};
   const sp = adj.step_product_cross || {};
-  const steps = Object.keys(sp).sort((a, b) => {
-    const va = Object.values(sp[a] || {}).reduce((s, v) => s + v, 0);
-    const vb = Object.values(sp[b] || {}).reduce((s, v) => s + v, 0);
-    return vb - va;
+  const allSteps = Object.keys(sp);
+  const stepTotals = {};
+  allSteps.forEach(s => {
+    stepTotals[s] = Object.values(sp[s] || {}).reduce((sum, v) => sum + v, 0);
   });
+  const steps = allSteps.sort((a, b) => stepTotals[b] - stepTotals[a]);
   const option = {
     tooltip: { trigger: 'axis' },
     legend: { data: ['互联网专线', '千里眼'] },
@@ -571,7 +560,9 @@ function AdjStepProd({ data }) {
     yAxis: { type: 'value' },
     series: [
       { name: '互联网专线', type: 'bar', stack: 'total', data: steps.map(s => (sp[s] || {})['互联网专线'] || 0), itemStyle: { color: chartColors.internet } },
-      { name: '千里眼', type: 'bar', stack: 'total', data: steps.map(s => (sp[s] || {})['千里眼'] || 0), itemStyle: { color: chartColors.qianliyan } },
+      { name: '千里眼', type: 'bar', stack: 'total', data: steps.map(s => (sp[s] || {})['千里眼'] || 0), itemStyle: { color: chartColors.qianliyan },
+        label: { show: true, position: 'top', formatter: (p) => stepTotals[steps[p.dataIndex]] || '' },
+      },
     ],
   };
   return <ReactECharts option={option} style={{ height: 300 }} opts={defaultOpts} notMerge={notMerge} />;
@@ -591,31 +582,69 @@ function AdjMonthly({ data }) {
 }
 
 // Cancellation deep charts
-function CanStep({ data }) {
+function CanCityDist({ data }) {
   const can = data.cancellation_inprogress || {};
-  const steps = can.step_distribution || {};
-  const entries = Object.entries(steps).sort((a, b) => b[1] - a[1]);
+  const cities = (can.city_distribution || []).slice(0, 8).reverse();
   const option = {
     tooltip: { trigger: 'axis' },
-    xAxis: { type: 'category', data: entries.map(e => e[0]), axisLabel: { rotate: 30 } },
-    yAxis: { type: 'value' },
-    series: [{ type: 'bar', data: entries.map(e => e[1]), itemStyle: { color: chartColors.cancel }, label: { show: true, position: 'top' } }],
+    grid: { left: 80, right: 40 },
+    xAxis: { type: 'value' },
+    yAxis: { type: 'category', data: cities.map(c => c.city), inverse: true },
+    series: [
+      { type: 'bar', data: cities.map(c => c.total), itemStyle: { color: chartColors.cancel }, label: { show: true, position: 'right' } },
+    ],
   };
   return <ReactECharts option={option} style={{ height: 300 }} opts={defaultOpts} notMerge={notMerge} />;
 }
 
-function CanBacklog({ data }) {
+function CanCityBacklog({ data }) {
   const can = data.cancellation_inprogress || {};
-  const bins = can.backlog_bins || [];
+  const cbb = can.city_backlog_bins || {};
+  const cities = cbb.cities || [];
+  const bins = cbb.bins || [];
+  const cellData = cbb.data || {};
+  if (!cities.length) return <div style={{ height: 300, display: 'flex', alignItems: 'center', justifyContent: 'center', color: '#999' }}>暂无数据</div>;
+
+  const cityTotals = cities.map(c => bins.reduce((sum, bin) => sum + ((cellData[c] || {})[bin] || 0), 0));
+
   const option = {
-    tooltip: { trigger: 'axis' },
-    xAxis: { type: 'category', data: bins.map(b => b.range) },
-    yAxis: { type: 'value' },
-    series: [{
-      type: 'bar', data: bins.map(b => b.count),
-      itemStyle: { color: (p) => p.dataIndex >= 3 ? chartColors.cancel : p.dataIndex >= 2 ? '#ce93d8' : chartColors.internet },
-      label: { show: true, position: 'top' },
-    }],
+    tooltip: { trigger: 'axis', axisPointer: { type: 'shadow' } },
+    legend: { data: bins, top: 0 },
+    grid: { left: 80, right: 40, top: 40 },
+    xAxis: { type: 'value' },
+    yAxis: { type: 'category', data: cities.map((c, i) => `${c} (${cityTotals[i]})`), inverse: true },
+    series: bins.map((bin, i) => ({
+      name: bin, type: 'bar', stack: 'total',
+      data: cities.map(c => (cellData[c] || {})[bin] || 0),
+      itemStyle: { color: backlogBinColors[i] },
+      label: { show: false },
+    })),
+  };
+  return <ReactECharts option={option} style={{ height: 300 }} opts={defaultOpts} notMerge={notMerge} />;
+}
+
+function CanCityProduct({ data }) {
+  const can = data.cancellation_inprogress || {};
+  const cpb = can.city_product_bins || {};
+  const cities = cpb.cities || [];
+  const prods = cpb.products || [];
+  const cellData = cpb.data || {};
+  if (!cities.length) return <div style={{ height: 300, display: 'flex', alignItems: 'center', justifyContent: 'center', color: '#999' }}>暂无数据</div>;
+
+  const cityTotals = cities.map(c => prods.reduce((sum, p) => sum + ((cellData[c] || {})[p] || 0), 0));
+
+  const option = {
+    tooltip: { trigger: 'axis', axisPointer: { type: 'shadow' } },
+    legend: { data: prods, top: 0 },
+    grid: { left: 80, right: 40, top: 40 },
+    xAxis: { type: 'value' },
+    yAxis: { type: 'category', data: cities.map((c, i) => `${c} (${cityTotals[i]})`), inverse: true },
+    series: prods.map((prod, i) => ({
+      name: prod, type: 'bar', stack: 'total',
+      data: cities.map(c => (cellData[c] || {})[prod] || 0),
+      itemStyle: { color: productColors[i] },
+      label: { show: false },
+    })),
   };
   return <ReactECharts option={option} style={{ height: 300 }} opts={defaultOpts} notMerge={notMerge} />;
 }
@@ -623,11 +652,12 @@ function CanBacklog({ data }) {
 function CanStepProd({ data }) {
   const can = data.cancellation_inprogress || {};
   const sp = can.step_product_cross || {};
-  const steps = Object.keys(sp).sort((a, b) => {
-    const va = Object.values(sp[a] || {}).reduce((s, v) => s + v, 0);
-    const vb = Object.values(sp[b] || {}).reduce((s, v) => s + v, 0);
-    return vb - va;
+  const allSteps = Object.keys(sp);
+  const stepTotals = {};
+  allSteps.forEach(s => {
+    stepTotals[s] = Object.values(sp[s] || {}).reduce((sum, v) => sum + v, 0);
   });
+  const steps = allSteps.sort((a, b) => stepTotals[b] - stepTotals[a]);
   const option = {
     tooltip: { trigger: 'axis' },
     legend: { data: ['互联网专线', '千里眼'] },
@@ -635,7 +665,9 @@ function CanStepProd({ data }) {
     yAxis: { type: 'value' },
     series: [
       { name: '互联网专线', type: 'bar', stack: 'total', data: steps.map(s => (sp[s] || {})['互联网专线'] || 0), itemStyle: { color: chartColors.internet } },
-      { name: '千里眼', type: 'bar', stack: 'total', data: steps.map(s => (sp[s] || {})['千里眼'] || 0), itemStyle: { color: chartColors.qianliyan } },
+      { name: '千里眼', type: 'bar', stack: 'total', data: steps.map(s => (sp[s] || {})['千里眼'] || 0), itemStyle: { color: chartColors.qianliyan },
+        label: { show: true, position: 'top', formatter: (p) => stepTotals[steps[p.dataIndex]] || '' },
+      },
     ],
   };
   return <ReactECharts option={option} style={{ height: 300 }} opts={defaultOpts} notMerge={notMerge} />;

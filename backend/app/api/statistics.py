@@ -763,6 +763,38 @@ def get_portrait(db: Session = Depends(get_db)):
         bins = [(0, 7, "0-7天"), (8, 30, "8-30天"), (31, 60, "31-60天"), (61, 90, "61-90天"), (91, 999, "90天以上")]
         result["backlog_bins"] = [{"range": label, "count": sum(1 for r in items if lo <= r["backlog"] <= hi)} for lo, hi, label in bins]
 
+        # city × backlog bins (TOP8 cities by total in-progress)
+        bin_labels = [label for _, _, label in bins]
+        cbl = defaultdict(lambda: {label: 0 for label in bin_labels})
+        for r in items:
+            c = r["city"] or "未知"
+            for lo, hi, label in bins:
+                if lo <= r["backlog"] <= hi:
+                    cbl[c][label] += 1
+        city_totals = [(c, sum(v.values())) for c, v in cbl.items()]
+        city_totals.sort(key=lambda x: x[1], reverse=True)
+        top8 = [c for c, _ in city_totals[:8]]
+        result["city_backlog_bins"] = {
+            "cities": top8,
+            "bins": bin_labels,
+            "data": {c: dict(cbl[c]) for c in top8}
+        }
+
+        # city × product bins (TOP8 cities, 千里眼 vs 互联网专线)
+        cpb_prods = ["千里眼", "互联网专线"]
+        cpb_data = defaultdict(lambda: {p: 0 for p in cpb_prods})
+        for r in items:
+            c = r["city"] or "未知"
+            cpb_data[c][r["product"]] += 1
+        cpb_totals = [(c, sum(v.values())) for c, v in cpb_data.items()]
+        cpb_totals.sort(key=lambda x: x[1], reverse=True)
+        cpb_top8 = [c for c, _ in cpb_totals[:8]]
+        result["city_product_bins"] = {
+            "cities": cpb_top8,
+            "products": cpb_prods,
+            "data": {c: dict(cpb_data[c]) for c in cpb_top8}
+        }
+
         return result
 
     adj_records = [r for r in records if r["biz"] == "调整" and r["status"] == "开通中"]
