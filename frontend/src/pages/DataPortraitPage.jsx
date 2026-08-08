@@ -94,7 +94,7 @@ export default function DataPortraitPage() {
         color: '#fff', display: 'flex', justifyContent: 'space-between', alignItems: 'center',
       }}>
         <div>
-          <h2 style={{ margin: 0, fontSize: 20 }}>广东福彩运维工单数据画像</h2>
+          <h2 style={{ margin: 0, fontSize: 20 }}>工单数据画像</h2>
           <div style={{ fontSize: 12, opacity: .85, marginTop: 2 }}>统计时间: {headerTime || '-'}</div>
         </div>
         <div style={{ fontSize: 12, opacity: .7 }}>数据生成: {data.generated_at || '-'}</div>
