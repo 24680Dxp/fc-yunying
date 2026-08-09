@@ -61,6 +61,10 @@ with sqlite_engine.connect() as src, pg_engine.connect() as dst:
         columns = rows[0]._fields
         for row in rows:
             data = dict(zip(columns, row))
+            # SQLite → PostgreSQL 类型转换
+            for k, v in data.items():
+                if isinstance(v, int) and k in ("is_active", "is_admin", "is_superuser"):
+                    data[k] = bool(v)
             dst.execute(sa.text(
                 f"INSERT INTO \"{table_name}\" ({', '.join(columns)}) "
                 f"VALUES ({', '.join(':' + c for c in columns)})"
