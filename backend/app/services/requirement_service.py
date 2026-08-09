@@ -22,43 +22,72 @@ def _extract_site_code(text: str) -> str:
     return m.group() if m else ''
 
 
-def _compute_req_status(req: Requirement, db: Session) -> str:
-    """根据需求的工单类型和网点号，匹配工单清单计算需求状态"""
+def _compute_product_statuses(req: Requirement, db: Session):
+    """返回 (专线状态, 千里眼状态)。
+    
+    按产品分类拆分匹配：
+    - 互联网专线 → 专线状态
+    - 千里眼/视频算力一张网/接入和云存储功能费用 → 千里眼状态
+    - 两个产品都匹配到 → 各自显示各自状态
+    - 只匹配到一个 → 匹配到的显示状态，另一个显示"无状态"
+    - 都没匹配到（网点类）→ 都显示"待评审"
+    - 非网点类 → 都显示"待开发"
+    """
     order_type = req.order_type or ''
     outlet_code = req.outlet_code or ''
 
     # 非网点类工单默认"待开发"
     if order_type not in ('网点新增', '网点迁移', '网点注销'):
-        return '待开发'
+        return '待开发', '待开发'
 
     op_type = ORDER_TYPE_TO_OP.get(order_type)
     if not op_type:
-        return '待评审'
+        return '待评审', '待评审'
 
-    # 查询匹配的工单（同一个 operation_type，且包含该网点号）
-    query = select(WorkOrder).where(
-        WorkOrder.operation_type == op_type,
-    )
+    # 查询匹配的工单（同一个 operation_type）
+    query = select(WorkOrder).where(WorkOrder.operation_type == op_type)
     work_orders = list(db.execute(query).scalars().all())
 
-    # 用网点号匹配工单的站点编号
-    matched_wo = None
+    # 按产品分类匹配
+    internet_matched = None   # 互联网专线
+    qianliyan_matched = None  # 千里眼（含视频算力一张网、接入和云存储功能费用）
+
     for wo in work_orders:
         addr = wo.customer_address or ''
         cam = wo.camera_install_location or ''
         site_code = _extract_site_code(addr) or _extract_site_code(cam)
         if site_code == outlet_code:
-            matched_wo = wo
-            break
+            product = wo.product_category or ''
+            if product in ('千里眼', '视频算力一张网', '接入和云存储功能费用'):
+                if qianliyan_matched is None:
+                    qianliyan_matched = wo
+            elif product == '互联网专线':
+                if internet_matched is None:
+                    internet_matched = wo
 
-    if not matched_wo:
-        return '待评审'
+    # 计算每个产品的状态
+    def _status(wo):
+        if wo is None:
+            return None
+        return '已完工' if wo.status == '已归档' else '处理中'
 
-    # 匹配到了，看工单状态
-    if matched_wo.status == '已归档':
-        return '已完工'
-    else:
-        return '处理中'
+    internet_status = _status(internet_matched)
+    qianliyan_status = _status(qianliyan_matched)
+
+    # 都没匹配到 → 待评审
+    if internet_status is None and qianliyan_status is None:
+        return '待评审', '待评审'
+
+    # 有匹配到的，未匹配的显示"无状态"
+    return internet_status or '无状态', qianliyan_status or '无状态'
+
+
+def _compute_req_status(req: Requirement, db: Session) -> str:
+    """兼容旧接口：从两个产品状态推导综合需求状态。
+    用于筛选过滤——只要任一产品状态匹配筛选值即命中。
+    """
+    internet_s, qianliyan_s = _compute_product_statuses(req, db)
+    return internet_s  # 保留给 filter 用的综合值，实际筛选走两个字段比对
 
 
 class RequirementService:
@@ -117,8 +146,11 @@ class RequirementService:
             data_query = data_query.order_by(Requirement.created_at.desc())
             all_items = list(db.execute(data_query).scalars().all())
 
-            # Compute req_status for each and filter
-            filtered = [r for r in all_items if _compute_req_status(r, db) == req_status]
+            # Compute req_status for each and filter — check both product statuses
+            def _matches_filter(r):
+                internet_s, qianliyan_s = _compute_product_statuses(r, db)
+                return internet_s == req_status or qianliyan_s == req_status
+            filtered = [r for r in all_items if _matches_filter(r)]
             total = len(filtered)
             items = filtered[skip:skip + limit]
             return items, total
@@ -237,6 +269,11 @@ class RequirementService:
         }
 
 
-def attach_req_status(req: Requirement, db: Session) -> str:
-    """计算需求的 req_status 并返回"""
+def attach_req_status(req: Requirement, db: Session):
+    """计算需求的 req_status 并返回（保留兼容性）"""
     return _compute_req_status(req, db)
+
+
+def attach_product_statuses(req: Requirement, db: Session):
+    """计算需求的专线状态和千里眼状态，返回 (internet_status, qianliyan_status)"""
+    return _compute_product_statuses(req, db)

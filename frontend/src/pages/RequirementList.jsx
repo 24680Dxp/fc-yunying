@@ -36,6 +36,7 @@ const reqStatusColors = {
   '处理中': 'processing',
   '已完工': 'success',
   '待开发': 'orange',
+  '无状态': '#8c8c8c',
 };
 
 // 工单类型选项
@@ -47,10 +48,27 @@ const orderTypeOptions = [
 const baseColumns = [
   // ---- 基本信息 ----
   { title: '接收日期', dataIndex: 'receive_date', width: 100, resizable: true },
-  // ---- 需求状态 ----
+  // ---- 产品状态 ----
   {
-    title: '需求状态', dataIndex: 'req_status', width: 100, resizable: true,
-    render: (v) => <Tag color={reqStatusColors[v] || 'default'}>{v || '待开发'}</Tag>,
+    title: '专线状态', dataIndex: 'internet_status', width: 90, resizable: true,
+    render: (v) => {
+      const status = v || '无状态';
+      const isNone = status === '无状态';
+      return <Tag color={reqStatusColors[status] || 'default'}
+        style={isNone ? { color: '#595959', borderColor: '#bfbfbf', background: '#f5f5f5' } : undefined}>
+        {status}
+      </Tag>;
+    },
+  },
+  {
+    title: '千里眼状态', dataIndex: 'qianliyan_status', width: 100, resizable: true,
+    render: (v) => {
+      const status = v || '无状态';
+      const isNone = status === '无状态';
+      return <Tag color={isNone ? 'error' : (reqStatusColors[status] || 'default')}>
+        {status}
+      </Tag>;
+    },
   },
   // ---- 联系人 ----
   {

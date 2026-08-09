@@ -13,7 +13,7 @@ from app.schemas.requirement import (
     RequirementResponse,
     RequirementUpdate,
 )
-from app.services.requirement_service import RequirementService, attach_req_status
+from app.services.requirement_service import RequirementService, attach_req_status, attach_product_statuses
 from app.auth import require_admin
 from app.models.user import User
 import logging
@@ -130,7 +130,8 @@ def upload_requirements(
 
 EXPORT_HEADERS = [
     ("receive_date", "接收日期"),
-    ("req_status", "需求状态"),
+    ("internet_status", "专线状态"),
+    ("qianliyan_status", "千里眼状态"),
     ("owner_name", "业主姓名"),
     ("contact", "联系方式"),
     ("city", "市"),
@@ -173,10 +174,13 @@ def export_requirements(
     writer.writerow([h[1] for h in EXPORT_HEADERS])
 
     for r in items:
-        req_status = attach_req_status(r, db)
+        internet_s, qianliyan_s = attach_product_statuses(r, db)
+        status_map = {
+            "internet_status": internet_s,
+            "qianliyan_status": qianliyan_s,
+        }
         writer.writerow([
-            getattr(r, field, "")
-            if field != "req_status" else req_status
+            status_map.get(field, getattr(r, field, ""))
             for field, _ in EXPORT_HEADERS
         ])
 
@@ -189,9 +193,12 @@ def export_requirements(
 
 
 def _enrich(requirement_obj, db: Session) -> RequirementResponse:
-    """将 ORM 对象转为 Response，并注入计算的 req_status"""
+    """将 ORM 对象转为 Response，并注入计算的 req_status + 产品状态"""
     resp = RequirementResponse.model_validate(requirement_obj)
     resp.req_status = attach_req_status(requirement_obj, db)
+    internet_s, qianliyan_s = attach_product_statuses(requirement_obj, db)
+    resp.internet_status = internet_s
+    resp.qianliyan_status = qianliyan_s
     return resp
 
 

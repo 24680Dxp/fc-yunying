@@ -42,6 +42,8 @@ class RequirementResponse(RequirementBase):
     status: str
     priority: str
     req_status: str = ""
+    internet_status: str = ""
+    qianliyan_status: str = ""
     created_at: datetime
     updated_at: datetime
 
