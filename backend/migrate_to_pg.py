@@ -28,6 +28,11 @@ print(f"SQLite 表: {table_names}")
 
 # ---------- 在 PG 中建表 ----------
 from app.database import Base
+# 导入所有模型，确保 Base.metadata 包含全部表
+import app.models.user  # noqa
+import app.models.work_order  # noqa
+import app.models.requirement  # noqa
+import app.models.historical_work_order  # noqa
 Base.metadata.create_all(bind=pg_engine)
 print("PostgreSQL 表已创建")
 
