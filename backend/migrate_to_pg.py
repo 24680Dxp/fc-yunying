@@ -32,8 +32,15 @@ Base.metadata.create_all(bind=pg_engine)
 print("PostgreSQL 表已创建")
 
 # ---------- 逐表迁移 ----------
+# ---------- 只迁移项目数据表（排除 agent 等无关表） ----------
+PROJECT_TABLES = {"users", "work_orders", "requirements", "historical_work_orders"}
+
 with sqlite_engine.connect() as src, pg_engine.connect() as dst:
     for table_name in table_names:
+        if table_name not in PROJECT_TABLES:
+            print(f"  {table_name}: 非项目表，跳过")
+            continue
+
         # 检查 PG 中是否已有数据
         cnt = dst.execute(sa.text(f"SELECT COUNT(*) FROM \"{table_name}\"")).scalar()
         if cnt > 0:
