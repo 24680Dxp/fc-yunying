@@ -30,6 +30,7 @@ const reqStatusLabels = {
   '处理中': '处理中',
   '已完工': '已完工',
   '待开发': '待开发',
+  '无状态': '无状态',
 };
 const reqStatusColors = {
   '待评审': 'default',
@@ -128,6 +129,8 @@ export default function RequirementList() {
   const [dateRange, setDateRange] = useState(null);
   const [selectedCity, setSelectedCity] = useState(undefined);
   const [reqStatusFilter, setReqStatusFilter] = useState(undefined);
+  const [internetStatusFilter, setInternetStatusFilter] = useState(undefined);
+  const [qianliyanStatusFilter, setQianliyanStatusFilter] = useState(undefined);
   const [form] = Form.useForm();
 
   // 可拖拽列宽（持久化到 localStorage）
@@ -202,6 +205,8 @@ export default function RequirementList() {
         ...filters,
       };
       if (reqStatusFilter) params.req_status = reqStatusFilter;
+      if (internetStatusFilter) params.internet_status = internetStatusFilter;
+      if (qianliyanStatusFilter) params.qianliyan_status = qianliyanStatusFilter;
       // 日期范围：格式化为 YYYY-MM-DD 字符串
       if (dateRange && dateRange[0]) {
         params.date_from = dateRange[0].format('YYYY-MM-DD');
@@ -218,7 +223,7 @@ export default function RequirementList() {
     setLoading(false);
   };
 
-  useEffect(() => { fetchData(); }, [page, filters, dateRange, reqStatusFilter]);
+  useEffect(() => { fetchData(); }, [page, filters, dateRange, reqStatusFilter, internetStatusFilter, qianliyanStatusFilter]);
 
   const handleSearch = () => {
     setPage(1);
@@ -283,6 +288,8 @@ export default function RequirementList() {
     try {
       const params = { search: search || undefined, ...filters };
       if (reqStatusFilter) params.req_status = reqStatusFilter;
+      if (internetStatusFilter) params.internet_status = internetStatusFilter;
+      if (qianliyanStatusFilter) params.qianliyan_status = qianliyanStatusFilter;
       if (dateRange && dateRange[0]) params.date_from = dateRange[0].format('YYYY-MM-DD');
       if (dateRange && dateRange[1]) params.date_to = dateRange[1].format('YYYY-MM-DD');
       const res = await exportRequirements(params);
@@ -323,6 +330,8 @@ export default function RequirementList() {
     setFilters({});
     setDateRange(null);
     setReqStatusFilter(undefined);
+    setInternetStatusFilter(undefined);
+    setQianliyanStatusFilter(undefined);
     setPage(1);
   };
 
@@ -343,7 +352,7 @@ export default function RequirementList() {
             <div style={{ display: 'flex', gap: 12, alignItems: 'center' }}>
               <div style={{
                 border: '1px solid #d9d9d9', borderRadius: 6, display: 'flex', alignItems: 'center',
-                background: '#fff', overflow: 'hidden', width: 552,
+                background: '#fff', overflow: 'hidden', width: 330,
               }}>
                 <span style={{
                   padding: '5px 12px', fontSize: 14, color: '#434343', whiteSpace: 'nowrap',
@@ -362,17 +371,33 @@ export default function RequirementList() {
               </div>
               <div style={{
                 border: '1px solid #d9d9d9', borderRadius: 6, display: 'flex', alignItems: 'center',
-                background: '#fff', overflow: 'hidden', width: 164,
+                background: '#fff', overflow: 'hidden', width: 170,
               }}>
                 <span style={{
                   padding: '5px 12px', fontSize: 14, color: '#434343', whiteSpace: 'nowrap',
                   borderRight: '1px solid #f0f0f0', userSelect: 'none',
-                }}>需求状态</span>
+                }}>专线状态</span>
                 <Select
                   placeholder="全部" allowClear variant="borderless"
                   style={{ flex: 1, minWidth: 0 }}
-                  value={reqStatusFilter}
-                  onChange={(v) => { setReqStatusFilter(v); setPage(1); }}
+                  value={internetStatusFilter}
+                  onChange={(v) => { setInternetStatusFilter(v); setPage(1); }}
+                  options={Object.keys(reqStatusLabels).map(k => ({ label: k, value: k }))}
+                />
+              </div>
+              <div style={{
+                border: '1px solid #d9d9d9', borderRadius: 6, display: 'flex', alignItems: 'center',
+                background: '#fff', overflow: 'hidden', width: 210,
+              }}>
+                <span style={{
+                  padding: '5px 12px', fontSize: 14, color: '#434343', whiteSpace: 'nowrap',
+                  borderRight: '1px solid #f0f0f0', userSelect: 'none',
+                }}>千里眼状态</span>
+                <Select
+                  placeholder="全部" allowClear variant="borderless"
+                  style={{ flex: 1, minWidth: 0 }}
+                  value={qianliyanStatusFilter}
+                  onChange={(v) => { setQianliyanStatusFilter(v); setPage(1); }}
                   options={Object.keys(reqStatusLabels).map(k => ({ label: k, value: k }))}
                 />
               </div>

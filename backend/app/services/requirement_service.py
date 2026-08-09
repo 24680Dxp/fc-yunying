@@ -108,6 +108,8 @@ class RequirementService:
         date_from: Optional[str] = None,
         date_to: Optional[str] = None,
         req_status: Optional[str] = None,
+        internet_status: Optional[str] = None,
+        qianliyan_status: Optional[str] = None,
     ) -> Tuple[List[Requirement], int]:
         # Build filter conditions
         filters = []
@@ -135,9 +137,9 @@ class RequirementService:
                 | Requirement.product_code.ilike(f"%{search}%")
             )
 
-        # If req_status filter is set, query all matching items first,
-        # compute req_status, filter, then paginate
-        if req_status:
+        # If product status filter is set, query all matching items first,
+        # compute product statuses, filter, then paginate
+        if internet_status or qianliyan_status:
             data_query = select(Requirement)
             if filters:
                 data_query = data_query.where(*filters)
@@ -146,10 +148,14 @@ class RequirementService:
             data_query = data_query.order_by(Requirement.created_at.desc())
             all_items = list(db.execute(data_query).scalars().all())
 
-            # Compute req_status for each and filter — check both product statuses
+            # Compute product statuses for each and filter
             def _matches_filter(r):
                 internet_s, qianliyan_s = _compute_product_statuses(r, db)
-                return internet_s == req_status or qianliyan_s == req_status
+                if internet_status and internet_s != internet_status:
+                    return False
+                if qianliyan_status and qianliyan_s != qianliyan_status:
+                    return False
+                return True
             filtered = [r for r in all_items if _matches_filter(r)]
             total = len(filtered)
             items = filtered[skip:skip + limit]
