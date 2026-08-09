@@ -15,9 +15,9 @@ import {
   getStatisticsByOperationType,
   getStatisticsByProductCategory,
   getStatisticsByStatus,
-  getStatisticsByCity,
   getStatisticsActiveByCity,
   getStatisticsActiveByCityDetail,
+  getStatisticsAllByCityDetail,
   getStatisticsCrossOperationCategory,
 } from '../api';
 
@@ -29,9 +29,9 @@ export default function StatisticsPage() {
   const [byOperationType, setByOperationType] = useState([]);
   const [byProductCategory, setByProductCategory] = useState([]);
   const [byStatus, setByStatus] = useState([]);
-  const [byCity, setByCity] = useState([]);
   const [activeByCity, setActiveByCity] = useState([]);
   const [activeByCityDetail, setActiveByCityDetail] = useState([]);
+  const [allByCityDetail, setAllByCityDetail] = useState([]);
   const [crossData, setCrossData] = useState([]);
 
   useEffect(() => {
@@ -40,18 +40,18 @@ export default function StatisticsPage() {
       getStatisticsByOperationType(),
       getStatisticsByProductCategory(),
       getStatisticsByStatus(),
-      getStatisticsByCity(),
       getStatisticsActiveByCity(),
       getStatisticsActiveByCityDetail(),
+      getStatisticsAllByCityDetail(),
       getStatisticsCrossOperationCategory(),
-    ]).then(([totalRes, opRes, catRes, statusRes, cityRes, activeCityRes, activeDetailRes, crossRes]) => {
+    ]).then(([totalRes, opRes, catRes, statusRes, activeCityRes, activeDetailRes, allDetailRes, crossRes]) => {
       setTotal(totalRes.data);
       setByOperationType(opRes.data);
       setByProductCategory(catRes.data);
       setByStatus(statusRes.data);
-      setByCity(cityRes.data);
       setActiveByCity(activeCityRes.data);
       setActiveByCityDetail(activeDetailRes.data);
+      setAllByCityDetail(allDetailRes.data);
       setCrossData(crossRes.data);
     }).catch(() => {
     }).finally(() => setLoading(false));
@@ -75,9 +75,23 @@ export default function StatisticsPage() {
     qianliyan_adjust: activeByCityDetail.reduce((s, r) => s + r.qianliyan_adjust, 0),
     qianliyan_cancel: activeByCityDetail.reduce((s, r) => s + r.qianliyan_cancel, 0),
     internet_open: activeByCityDetail.reduce((s, r) => s + r.internet_open, 0),
+    internet_adjust: activeByCityDetail.reduce((s, r) => s + r.internet_adjust, 0),
     internet_cancel: activeByCityDetail.reduce((s, r) => s + r.internet_cancel, 0),
   };
   const detailWithTotal = [...activeByCityDetail, detailTotalRow];
+
+  // 合计行：all-by-city-detail
+  const allDetailTotalRow = {
+    name: '合计',
+    total: allByCityDetail.reduce((s, r) => s + r.total, 0),
+    qianliyan_open: allByCityDetail.reduce((s, r) => s + r.qianliyan_open, 0),
+    qianliyan_adjust: allByCityDetail.reduce((s, r) => s + r.qianliyan_adjust, 0),
+    qianliyan_cancel: allByCityDetail.reduce((s, r) => s + r.qianliyan_cancel, 0),
+    internet_open: allByCityDetail.reduce((s, r) => s + r.internet_open, 0),
+    internet_adjust: allByCityDetail.reduce((s, r) => s + r.internet_adjust, 0),
+    internet_cancel: allByCityDetail.reduce((s, r) => s + r.internet_cancel, 0),
+  };
+  const allDetailWithTotal = [...allByCityDetail, allDetailTotalRow];
 
   // 合并表合计行
   const crossTotal = {
@@ -146,6 +160,12 @@ export default function StatisticsPage() {
               pagination={false}
               size="small"
               scroll={{ x: 600 }}
+              onRow={(record) => {
+                if (record.operation_type === '业务开通') {
+                  return { style: { backgroundColor: '#f6ffed' } };
+                }
+                return {};
+              }}
               columns={[
                 { title: '操作类型', dataIndex: 'operation_type', width: 120,
                   render: (v, r) => r.operation_type === '合计'
@@ -189,38 +209,43 @@ export default function StatisticsPage() {
               dataSource={detailWithTotal}
               pagination={false}
               size="small"
-              scroll={{ x: 1100 }}
               columns={[
                 {
-                  title: '地市', dataIndex: 'name', width: 100, fixed: 'left',
+                  title: '地市', dataIndex: 'name',
                   render: (v, r) => r.name === '合计'
                     ? <span style={{ fontWeight: 700 }}>{v}</span>
                     : v,
                 },
                 {
-                  title: '在途工单总数', dataIndex: 'total', width: 110,
+                  title: '在途工单总数', dataIndex: 'total',
                   render: (v, r) => r.name === '合计'
                     ? <span style={{ fontWeight: 700, color: '#faad14' }}>{v}</span>
                     : <span style={{ fontWeight: 600, color: '#faad14' }}>{v}</span>,
                 },
                 {
-                  title: '千里眼开通在途', dataIndex: 'qianliyan_open', width: 120,
+                  title: '千里眼开通在途', dataIndex: 'qianliyan_open',
+                  onCell: () => ({ style: { backgroundColor: '#f6ffed' } }),
                   render: (v, r) => r.name === '合计' ? <span style={{ fontWeight: 700, color: '#1890ff' }}>{v}</span> : <span style={{ color: '#1890ff' }}>{v}</span>,
                 },
                 {
-                  title: '千里眼调整在途', dataIndex: 'qianliyan_adjust', width: 120,
+                  title: '千里眼调整在途', dataIndex: 'qianliyan_adjust',
                   render: (v, r) => r.name === '合计' ? <span style={{ fontWeight: 700, color: '#1890ff' }}>{v}</span> : <span style={{ color: '#1890ff' }}>{v}</span>,
                 },
                 {
-                  title: '千里眼取消在途', dataIndex: 'qianliyan_cancel', width: 120,
+                  title: '千里眼取消在途', dataIndex: 'qianliyan_cancel',
                   render: (v, r) => r.name === '合计' ? <span style={{ fontWeight: 700, color: '#1890ff' }}>{v}</span> : <span style={{ color: '#1890ff' }}>{v}</span>,
                 },
                 {
-                  title: '互联网开通在途', dataIndex: 'internet_open', width: 120,
+                  title: '互联网开通在途', dataIndex: 'internet_open',
+                  onCell: () => ({ style: { backgroundColor: '#f6ffed' } }),
                   render: (v, r) => r.name === '合计' ? <span style={{ fontWeight: 700, color: '#1890ff' }}>{v}</span> : <span style={{ color: '#1890ff' }}>{v}</span>,
                 },
                 {
-                  title: '互联网取消在途', dataIndex: 'internet_cancel', width: 120,
+                  title: '互联网调整在途', dataIndex: 'internet_adjust',
+                  render: (v, r) => r.name === '合计' ? <span style={{ fontWeight: 700, color: '#1890ff' }}>{v}</span> : <span style={{ color: '#1890ff' }}>{v}</span>,
+                },
+                {
+                  title: '互联网取消在途', dataIndex: 'internet_cancel',
                   render: (v, r) => r.name === '合计' ? <span style={{ fontWeight: 700, color: '#1890ff' }}>{v}</span> : <span style={{ color: '#1890ff' }}>{v}</span>,
                 },
               ]}
@@ -229,24 +254,53 @@ export default function StatisticsPage() {
         </Col>
 
         <Col xs={24}>
-          <Card title={<Space><BarChartOutlined />按业务所属地市统计</Space>} style={cardStyle}>
+          <Card
+            title={<Space><BarChartOutlined />全量工单统计（共 {totalWorkOrders} 条）</Space>}
+            style={cardStyle}
+          >
             <Table
               rowKey="name"
-              dataSource={byCity}
-              pagination={{ pageSize: 10, showTotal: (t) => `共 ${t} 个城市` }}
+              dataSource={allDetailWithTotal}
+              pagination={false}
               size="small"
               columns={[
-                { title: '地市', dataIndex: 'name', width: 120 },
                 {
-                  title: '工单数', dataIndex: 'count', width: 80,
-                  render: (v) => <span style={{ fontWeight: 600, color: '#1890ff' }}>{v}</span>,
+                  title: '地市', dataIndex: 'name',
+                  render: (v, r) => r.name === '合计'
+                    ? <span style={{ fontWeight: 700 }}>{v}</span>
+                    : v,
                 },
                 {
-                  title: '占比', width: 100,
-                  render: (_, r) => {
-                    const pct = totalWorkOrders ? ((r.count / totalWorkOrders) * 100).toFixed(1) : 0;
-                    return <span>{pct}%</span>;
-                  },
+                  title: '工单总数', dataIndex: 'total',
+                  render: (v, r) => r.name === '合计'
+                    ? <span style={{ fontWeight: 700, color: '#1890ff' }}>{v}</span>
+                    : <span style={{ fontWeight: 600, color: '#1890ff' }}>{v}</span>,
+                },
+                {
+                  title: '千里眼开通', dataIndex: 'qianliyan_open',
+                  onCell: () => ({ style: { backgroundColor: '#f6ffed' } }),
+                  render: (v, r) => r.name === '合计' ? <span style={{ fontWeight: 700, color: '#1890ff' }}>{v}</span> : <span style={{ color: '#1890ff' }}>{v}</span>,
+                },
+                {
+                  title: '千里眼调整', dataIndex: 'qianliyan_adjust',
+                  render: (v, r) => r.name === '合计' ? <span style={{ fontWeight: 700, color: '#1890ff' }}>{v}</span> : <span style={{ color: '#1890ff' }}>{v}</span>,
+                },
+                {
+                  title: '千里眼取消', dataIndex: 'qianliyan_cancel',
+                  render: (v, r) => r.name === '合计' ? <span style={{ fontWeight: 700, color: '#1890ff' }}>{v}</span> : <span style={{ color: '#1890ff' }}>{v}</span>,
+                },
+                {
+                  title: '互联网开通', dataIndex: 'internet_open',
+                  onCell: () => ({ style: { backgroundColor: '#f6ffed' } }),
+                  render: (v, r) => r.name === '合计' ? <span style={{ fontWeight: 700, color: '#1890ff' }}>{v}</span> : <span style={{ color: '#1890ff' }}>{v}</span>,
+                },
+                {
+                  title: '互联网调整', dataIndex: 'internet_adjust',
+                  render: (v, r) => r.name === '合计' ? <span style={{ fontWeight: 700, color: '#1890ff' }}>{v}</span> : <span style={{ color: '#1890ff' }}>{v}</span>,
+                },
+                {
+                  title: '互联网取消', dataIndex: 'internet_cancel',
+                  render: (v, r) => r.name === '合计' ? <span style={{ fontWeight: 700, color: '#1890ff' }}>{v}</span> : <span style={{ color: '#1890ff' }}>{v}</span>,
                 },
               ]}
             />

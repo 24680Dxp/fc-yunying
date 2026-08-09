@@ -150,6 +150,10 @@ export function getStatisticsActiveByCityDetail() {
   return authApi.get('/statistics/active-by-city-detail');
 }
 
+export function getStatisticsAllByCityDetail() {
+  return authApi.get('/statistics/all-by-city-detail');
+}
+
 export function getStatisticsCrossOperationCategory() {
   return authApi.get('/statistics/cross-operation-category');
 }

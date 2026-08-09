@@ -135,6 +135,7 @@ export default function FullcycleStatisticsPage() {
                 <div style={{ fontSize: 13, color: '#999', marginTop: 4 }}>
                   <div>新增&迁移施工中 {validActive}</div>
                   <div>已完工 {validFinished}</div>
+                  <div>运营期千里眼取消 {summary?.operation_qianliyan_cancel || 0}</div>
                 </div>
               }
             />
