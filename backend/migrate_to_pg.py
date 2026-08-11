@@ -73,4 +73,21 @@ with sqlite_engine.connect() as src, pg_engine.connect() as dst:
         dst.commit()
         print(f"  {table_name}: 迁移 {len(rows)} 条")
 
+# ---------- 重置自增序列（关键！否则后续 INSERT 会 ID 冲突） ----------
+print("\n重置自增序列...")
+with pg_engine.connect() as dst:
+    for table_name in PROJECT_TABLES:
+        seq_name = f"{table_name}_id_seq"
+        # 检查序列是否存在（有些表可能没有序列）
+        seq_exists = dst.execute(sa.text(
+            f"SELECT EXISTS (SELECT 1 FROM pg_class WHERE relname = '{seq_name}')"
+        )).scalar()
+        if seq_exists:
+            max_id = dst.execute(sa.text(
+                f"SELECT COALESCE(MAX(id), 0) FROM \"{table_name}\""
+            )).scalar()
+            dst.execute(sa.text(f"SELECT setval('{seq_name}', {max_id})"))
+            print(f"  {seq_name} → {max_id}")
+    dst.commit()
+
 print("\n迁移完成!")
