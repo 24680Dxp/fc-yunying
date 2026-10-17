@@ -13,7 +13,7 @@ from app.schemas.requirement import (
     RequirementResponse,
     RequirementUpdate,
 )
-from app.services.requirement_service import RequirementService, attach_req_status, attach_product_statuses
+from app.services.requirement_service import RequirementService, attach_req_status, attach_product_statuses, build_work_order_index
 from app.auth import require_admin
 from app.models.user import User
 import logging
@@ -176,8 +176,9 @@ def export_requirements(
     writer = csv.writer(output)
     writer.writerow([h[1] for h in EXPORT_HEADERS])
 
+    wo_index = build_work_order_index(db)
     for r in items:
-        internet_s, qianliyan_s = attach_product_statuses(r, db)
+        internet_s, qianliyan_s = attach_product_statuses(r, db, wo_index)
         status_map = {
             "internet_status": internet_s,
             "qianliyan_status": qianliyan_s,
@@ -195,11 +196,11 @@ def export_requirements(
    )
 
 
-def _enrich(requirement_obj, db: Session) -> RequirementResponse:
+def _enrich(requirement_obj, db: Session, index=None) -> RequirementResponse:
     """将 ORM 对象转为 Response，并注入计算的 req_status + 产品状态"""
     resp = RequirementResponse.model_validate(requirement_obj)
-    resp.req_status = attach_req_status(requirement_obj, db)
-    internet_s, qianliyan_s = attach_product_statuses(requirement_obj, db)
+    resp.req_status = attach_req_status(requirement_obj, db, index)
+    internet_s, qianliyan_s = attach_product_statuses(requirement_obj, db, index)
     resp.internet_status = internet_s
     resp.qianliyan_status = qianliyan_s
     return resp
@@ -239,9 +240,10 @@ def list_requirements(
         qianliyan_status=qianliyan_status,
     )
     logger.info(f"result: total={total}, items={len(items)}")
+    wo_index = build_work_order_index(db)
     return RequirementList(
         total=total,
-        items=[_enrich(r, db) for r in items],
+        items=[_enrich(r, db, wo_index) for r in items],
         skip=skip,
         limit=limit,
     )

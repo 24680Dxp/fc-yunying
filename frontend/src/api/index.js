@@ -42,10 +42,11 @@ export function getRequirements(params = {}) {
 }
 
 export function exportRequirements(params = {}) {
-  // 直接返回 blob，触发下载
+  // 直接返回 blob，触发下载。导出需全量计算产品状态，超时放宽到 60s
   return authApi.get('/requirements/export', {
     params,
     responseType: 'blob',
+    timeout: 60000,
   });
 }
 
